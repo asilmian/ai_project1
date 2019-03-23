@@ -19,6 +19,7 @@ def main():
         data = json.load(file)
     board = Board(data)
     board.debug_print()
+    print(board.create_board_struct())
 
 class Board:
     #constructor class
@@ -48,8 +49,27 @@ class Board:
             out_board[tuple(block)] = "blk"
         return out_board
     
+    def create_board_struct(self):
+        out_struct = {}
+        for i in range(-3,4,1):
+            for j in range(-3-(i<0)*i,4-(i>0)*i,1):
+                pos = (i,j)
+                out_struct[pos] = findmoves(pos)
+        return out_struct
 
 
+
+def findmoves(pos):
+
+    moves = [[0, 1], [1, 0] , [1, -1]]
+    posmoves = []
+
+    for move in moves:
+        posmoves.append([a + b for a, b in zip(move, pos)])
+        posmoves.append([a + b for a, b in zip([-x for x in move], pos)])
+
+    sol = [tup for tup in posmoves if (abs(tup[0])<=3 and abs(tup[1])<=3) ]
+    return sol
 
 def print_board(board_dict, message="", debug=False, **kwargs):
     """
