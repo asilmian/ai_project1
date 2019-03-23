@@ -19,6 +19,7 @@ def main():
         data = json.load(file)
     board = Board(data)
     board.debug_print()
+    
     print(board.create_board_struct())
 
 class Board:
@@ -28,7 +29,7 @@ class Board:
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
         self.goals = GAME_SOLUTIONS[self.player_colour]
-
+        
 
     #prints out the current game state
     #board state is no longer stored
@@ -53,23 +54,51 @@ class Board:
         out_struct = {}
         for i in range(-3,4,1):
             for j in range(-3-(i<0)*i,4-(i>0)*i,1):
-                pos = (i,j)
-                out_struct[pos] = findmoves(pos)
+                pos = [i,j]
+                out_struct[str(pos)] = self.findmoves(pos)
+        
+
         return out_struct
 
+    # def check_move(self, move):
+    #     return (move in self.struct and 
 
 
-def findmoves(pos):
+    def findmoves(self, pos):
 
-    moves = [[0, 1], [1, 0] , [1, -1]]
-    posmoves = []
+        #list of all moves in all direction
+        moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
+        posmoves = []
 
-    for move in moves:
-        posmoves.append([a + b for a, b in zip(move, pos)])
-        posmoves.append([a + b for a, b in zip([-x for x in move], pos)])
+        # create a list of all new positions given start pos
+        for move in moves:
+            posmoves.append(add(pos, move))
+            
+        # check and calcluate if any jumps need to take place
+        
+        jmp = []
+        for tup in posmoves:
+            if (tup in self.blocks or tup in self.pieces):
+                jmp.append(add(tup,diff(tup,pos)))
+            else:
+                jmp.append(tup)
 
-    sol = [tup for tup in posmoves if (abs(tup[0])<=3 and abs(tup[1])<=3) ]
-    return sol
+        # remove any moves that fall on a new block or outside the board
+
+        sol = [tup for tup in jmp if (abs(tup[0])<=3 and abs(tup[1])<=3) and (tup not in self.blocks) and tup not in self.pieces]
+        
+        return sol
+
+
+def add(a,b):
+    return [x+y for x,y in zip(a,b)]
+
+def diff(a,b):
+    return [x-y for x,y in zip(a,b)]
+
+
+
+
 
 def print_board(board_dict, message="", debug=False, **kwargs):
     """
