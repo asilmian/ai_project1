@@ -20,7 +20,10 @@ def main():
     board = Board(data)
     board.debug_print()
     
-    print(board.create_board_struct())
+    #print(board.graph)
+
+    #print(board.findmoves([-2, -1]))
+    print(shortest_path(board.graph, tuple([-3, 1]), tuple([3, -2])))
 
 class Board:
     #constructor class
@@ -29,7 +32,10 @@ class Board:
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
         self.goals = GAME_SOLUTIONS[self.player_colour]
-        
+        self.graph = None
+        self.board = None
+        self.create_board()
+        self.create_board_struct()
 
     #prints out the current game state
     #board state is no longer stored
@@ -42,23 +48,23 @@ class Board:
     def create_board(self):
         out_board = {}
         for i in range(-3,4,1):
-            for j in range(-3,4,1):
+            for j in range(-3-(i<0)*i,4-(i>0)*i,1):
                 out_board[(i,j)] = 0
         for piece in self.pieces:
             out_board[tuple(piece)] = self.player_colour
         for block in self.blocks:
             out_board[tuple(block)] = "blk"
+        self.board = out_board
         return out_board
-    
+
     def create_board_struct(self):
         out_struct = {}
         for i in range(-3,4,1):
             for j in range(-3-(i<0)*i,4-(i>0)*i,1):
                 pos = [i,j]
-                out_struct[str(pos)] = self.findmoves(pos)
-        
-
-        return out_struct
+                out_struct[tuple(pos)] = set(self.findmoves(pos))
+                
+        self.graph = out_struct
 
     # def check_move(self, move):
     #     return (move in self.struct and 
@@ -85,10 +91,36 @@ class Board:
 
         # remove any moves that fall on a new block or outside the board
 
-        sol = [tup for tup in jmp if (abs(tup[0])<=3 and abs(tup[1])<=3) and (tup not in self.blocks) and tup not in self.pieces]
+        sol = [tuple(tup) for tup in jmp if (tuple(tup) in self.board) and (tup not in self.blocks) and (tup not in self.pieces)]
         
         return sol
 
+def bfs(graph, start):
+    visited, queue = set(), [start]
+    while queue:
+        
+        vertex = queue.pop(0)
+        #print(queue)
+        if vertex not in visited:
+            visited.add(vertex)
+            queue.extend(graph[vertex] - visited)
+    return visited
+
+def bfs_paths(graph, start, goal):
+    queue = [(start, [start])]
+    while queue:
+        (vertex, path) = queue.pop(0)
+        for next in graph[vertex] - set(path):
+            if next == goal:
+                yield path + [next]
+            else:
+                queue.append((next, path + [next]))
+
+def shortest_path(graph, start, goal):
+    try:
+        return next(bfs_paths(graph, start, goal))
+    except StopIteration:
+        return None
 
 def add(a,b):
     return [x+y for x,y in zip(a,b)]
