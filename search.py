@@ -2,40 +2,51 @@
 COMP30024 Artificial Intelligence, Semester 1 2019
 Solution to Project Part A: Searching
 
-Authors: 
+Authors: Asil Mian, John Stephenson
 """
 
 import sys
 import json
 
+#game solutions as defined by project spec
+GAME_SOLUTIONS = {"red": [[3,-3], [3,-2], [3,-1], [3,0]], "green": [[-3,3], [-2,3], [-1,3], [0,3]],
+                 "blue":[[0,-3], [-1,-2], [-2,-1], [-3,0]]}
+
+
+#currently set run debug_print
 def main():
     with open(sys.argv[1]) as file:
         data = json.load(file)
-    board = Board("Main Board")
-    board.update_board(data)
-    print_board(board.game_state,"", True)
-
-
-def update_state(board,game_state):
-    for piece in game_state["pieces"]:
-        board[tuple(piece)] = "" + game_state["colour"]
-    for block in game_state["blocks"]:
-        board[tuple(block)] = "BLK"
-    return board
-
-def create_empty_board():
-    board = {}
-    for i in range(-3,4,1):
-        for j in range(-3,4,1):
-            board[(i,j)] = 0
-    return board
+    board = Board(data)
+    board.debug_print()
 
 class Board:
-    def __init__(self, name):
-        self.name = name
-        self.game_state = create_empty_board()
-    def update_board(self,game_state):
-        self.game_state = update_state(self.game_state, game_state)
+    #constructor class
+    def __init__(self, starting_state):
+        self.player_colour = starting_state["colour"]
+        self.blocks = starting_state["blocks"]
+        self.pieces = starting_state["pieces"]
+        self.goals = GAME_SOLUTIONS[self.player_colour]
+
+
+    #prints out the current game state
+    #board state is no longer stored
+    def debug_print(self):
+        out_state = self.create_board()
+        print_board(out_state, "debug_printing", True)
+
+    #helper function for debug_print, creates the board
+    #board is essentially a dictionary
+    def create_board(self):
+        out_board = {}
+        for i in range(-3,4,1):
+            for j in range(-3,4,1):
+                out_board[(i,j)] = 0
+        for piece in self.pieces:
+            out_board[tuple(piece)] = self.player_colour
+        for block in self.blocks:
+            out_board[tuple(block)] = "blk"
+        return out_board
     
 
 
