@@ -11,5 +11,17 @@ def findmoves(pos):
 	return sol
 
 
-print(findmoves([0,0]))
+
+
+a = set([[1,1], [2,3]])
+
+b = [2,3]
+
+print(set(a))
+
+
+
+    	
+
+
 
