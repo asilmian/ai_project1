@@ -95,6 +95,9 @@ class Board:
         
         return sol
 
+# Adapted from https://eddmann.com/posts/depth-first-search-and-breadth-first-search-in-python/
+# ---------------------------------------------------------------
+
 def bfs(graph, start):
     visited, queue = set(), [start]
     while queue:
@@ -121,6 +124,8 @@ def shortest_path(graph, start, goal):
         return next(bfs_paths(graph, start, goal))
     except StopIteration:
         return None
+
+# -------------------------------------------------------------------
 
 def add(a,b):
     return [x+y for x,y in zip(a,b)]
