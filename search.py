@@ -9,8 +9,8 @@ import sys
 import json
 
 #game solutions as defined by project spec
-GAME_SOLUTIONS = {"red": [[3,-3], [3,-2], [3,-1], [3,0]], "green": [[-3,3], [-2,3], [-1,3], [0,3]],
-                 "blue":[[0,-3], [-1,-2], [-2,-1], [-3,0]]}
+GAME_SOLUTIONS = {"red": [(3,-3), (3,-2), (3,-1), (3,0)], "green": [(-3,3), (-2,3), (-1,3), (0,3)],
+                 "blue":[(0,-3), (-1,-2), (-2,-1), (-3,0)]}
 
 
 #currently set run debug_print
@@ -24,7 +24,7 @@ def main():
 
     #print(board.findmoves([-2, -1]))
     for piece in board.pieces:
-        print(shortest_path(board, tuple(piece), tuple([3, -2])))
+        print(shortest_path(board, tuple(piece), GAME_SOLUTIONS[board.player_colour]))
 
 class Board:
     #constructor class
@@ -114,7 +114,7 @@ def bfs_paths(board, start, goal):
         (vertex, path) = queue.pop(0)
         graph = {vertex: set(findmoves(board, vertex))}
         for next in graph[vertex] - set(path):
-            if next == goal:
+            if next in goal:
                 yield path + [next]
             else:
                 queue.append((next, path + [next]))
