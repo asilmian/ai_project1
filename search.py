@@ -19,6 +19,12 @@ def main():
         data = json.load(file)
     board = Board(data)
     board.debug_print()
+    
+    #print(board.graph)
+
+    #print(board.findmoves([-2, -1]))
+    for piece in board.pieces:
+        print(shortest_path(board, tuple(piece), tuple([3, -2])))
 
 class Board:
     #constructor class
@@ -27,7 +33,8 @@ class Board:
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
         self.goals = GAME_SOLUTIONS[self.player_colour]
-
+        self.board = None
+        #self.create_board()
 
     #prints out the current game state
     #board state is no longer stored
@@ -40,14 +47,93 @@ class Board:
     def create_board(self):
         out_board = {}
         for i in range(-3,4,1):
-            for j in range(-3,4,1):
+            for j in range(-3-(i<0)*i,4-(i>0)*i,1):
                 out_board[(i,j)] = 0
         for piece in self.pieces:
             out_board[tuple(piece)] = self.player_colour
         for block in self.blocks:
             out_board[tuple(block)] = "blk"
+        self.board = out_board
         return out_board
-    
+
+    # def create_board_struct(self):
+    #     out_struct = {}
+    #     for i in range(-3,4,1):
+    #         for j in range(-3-(i<0)*i,4-(i>0)*i,1):
+    #             pos = [i,j]
+    #             out_struct[tuple(pos)] = set(self.findmoves(pos))
+                
+    #     self.graph = out_struct
+
+    # def check_move(self, move):
+    #     return (move in self.struct and 
+
+
+def findmoves(board, pos):
+
+    #list of all moves in all direction
+    moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
+    posmoves = []
+
+    # create a list of all new positions given start pos
+    for move in moves:
+        posmoves.append(add(pos, move))
+            
+    # check and calcluate if any jumps need to take place
+        
+    jmp = []
+    for tup in posmoves:
+        if (tup in board.blocks or tup in board.pieces):
+            jmp.append(add(tup,diff(tup,pos)))
+        else:
+            jmp.append(tup)
+
+    # remove any moves that fall on a new block or outside the board
+
+    sol = [tuple(tup) for tup in jmp if (tuple(tup) in board.board) and (tup not in board.blocks) and (tup not in board.pieces)]
+        
+    return sol
+
+# Adapted from https://eddmann.com/posts/depth-first-search-and-breadth-first-search-in-python/
+# ---------------------------------------------------------------
+
+def bfs(graph, start):
+    visited, queue = set(), [start]
+    while queue:
+        
+        vertex = queue.pop(0)
+        #print(queue)
+        if vertex not in visited:
+            visited.add(vertex)
+            queue.extend(graph[vertex] - visited)
+    return visited
+
+def bfs_paths(board, start, goal):
+    queue = [(start, [start])]
+    while queue:
+        (vertex, path) = queue.pop(0)
+        graph = {vertex: set(findmoves(board, vertex))}
+        for next in graph[vertex] - set(path):
+            if next == goal:
+                yield path + [next]
+            else:
+                queue.append((next, path + [next]))
+
+def shortest_path(board, start, goal):
+    try:
+        return next(bfs_paths(board, start, goal))
+    except StopIteration:
+        return None
+
+# -------------------------------------------------------------------
+
+def add(a,b):
+    return [x+y for x,y in zip(a,b)]
+
+def diff(a,b):
+    return [x-y for x,y in zip(a,b)]
+
+
 
 
 
