@@ -23,7 +23,8 @@ def main():
     #print(board.graph)
 
     #print(board.findmoves([-2, -1]))
-    print(shortest_path(board.graph, tuple([-3, 1]), tuple([3, -2])))
+    for piece in board.pieces:
+        print(shortest_path(board, tuple(piece), tuple([3, -2])))
 
 class Board:
     #constructor class
@@ -32,10 +33,8 @@ class Board:
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
         self.goals = GAME_SOLUTIONS[self.player_colour]
-        self.graph = None
         self.board = None
-        self.create_board()
-        self.create_board_struct()
+        #self.create_board()
 
     #prints out the current game state
     #board state is no longer stored
@@ -57,43 +56,43 @@ class Board:
         self.board = out_board
         return out_board
 
-    def create_board_struct(self):
-        out_struct = {}
-        for i in range(-3,4,1):
-            for j in range(-3-(i<0)*i,4-(i>0)*i,1):
-                pos = [i,j]
-                out_struct[tuple(pos)] = set(self.findmoves(pos))
+    # def create_board_struct(self):
+    #     out_struct = {}
+    #     for i in range(-3,4,1):
+    #         for j in range(-3-(i<0)*i,4-(i>0)*i,1):
+    #             pos = [i,j]
+    #             out_struct[tuple(pos)] = set(self.findmoves(pos))
                 
-        self.graph = out_struct
+    #     self.graph = out_struct
 
     # def check_move(self, move):
     #     return (move in self.struct and 
 
 
-    def findmoves(self, pos):
+def findmoves(board, pos):
 
-        #list of all moves in all direction
-        moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
-        posmoves = []
+    #list of all moves in all direction
+    moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
+    posmoves = []
 
-        # create a list of all new positions given start pos
-        for move in moves:
-            posmoves.append(add(pos, move))
+    # create a list of all new positions given start pos
+    for move in moves:
+        posmoves.append(add(pos, move))
             
-        # check and calcluate if any jumps need to take place
+    # check and calcluate if any jumps need to take place
         
-        jmp = []
-        for tup in posmoves:
-            if (tup in self.blocks or tup in self.pieces):
-                jmp.append(add(tup,diff(tup,pos)))
-            else:
-                jmp.append(tup)
+    jmp = []
+    for tup in posmoves:
+        if (tup in board.blocks or tup in board.pieces):
+            jmp.append(add(tup,diff(tup,pos)))
+        else:
+            jmp.append(tup)
 
-        # remove any moves that fall on a new block or outside the board
+    # remove any moves that fall on a new block or outside the board
 
-        sol = [tuple(tup) for tup in jmp if (tuple(tup) in self.board) and (tup not in self.blocks) and (tup not in self.pieces)]
+    sol = [tuple(tup) for tup in jmp if (tuple(tup) in board.board) and (tup not in board.blocks) and (tup not in board.pieces)]
         
-        return sol
+    return sol
 
 # Adapted from https://eddmann.com/posts/depth-first-search-and-breadth-first-search-in-python/
 # ---------------------------------------------------------------
@@ -109,19 +108,20 @@ def bfs(graph, start):
             queue.extend(graph[vertex] - visited)
     return visited
 
-def bfs_paths(graph, start, goal):
+def bfs_paths(board, start, goal):
     queue = [(start, [start])]
     while queue:
         (vertex, path) = queue.pop(0)
+        graph = {vertex: set(findmoves(board, vertex))}
         for next in graph[vertex] - set(path):
             if next == goal:
                 yield path + [next]
             else:
                 queue.append((next, path + [next]))
 
-def shortest_path(graph, start, goal):
+def shortest_path(board, start, goal):
     try:
-        return next(bfs_paths(graph, start, goal))
+        return next(bfs_paths(board, start, goal))
     except StopIteration:
         return None
 
