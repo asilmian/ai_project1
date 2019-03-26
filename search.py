@@ -46,9 +46,14 @@ class Board:
     #board is essentially a dictionary
     def create_board(self):
         out_board = {}
-        for i in range(-3,4,1):
-            for j in range(-3-(i<0)*i,4-(i>0)*i,1):
-                out_board[(i,j)] = 0
+
+        ran = range(-3, +3 + 1)
+
+        for qr in [(q, r) for q in ran for r in ran if -q - r in ran]:
+
+        # for i in range(-3,4,1):
+        #     for j in range(-3-(i<0)*i,4-(i>0)*i,1):
+            out_board[qr] = None
         for piece in self.pieces:
             out_board[tuple(piece)] = self.player_colour
         for block in self.blocks:
