@@ -7,6 +7,8 @@ Authors: Asil Mian, John Stephenson
 
 import sys
 import json
+import copy
+import time
 
 #game solutions as defined by project spec
 GAME_SOLUTIONS = {"red": [(3,-3), (3,-2), (3,-1), (3,0)], "green": [(-3,3), (-2,3), (-1,3), (0,3)],
@@ -23,8 +25,12 @@ def main():
     #print(board.graph)
 
     #print(board.findmoves([-2, -1]))
-    for piece in board.pieces:
-        print(shortest_path(board, tuple(piece), GAME_SOLUTIONS[board.player_colour]))
+    
+    solution = shortest_path(board, board.pieces, GAME_SOLUTIONS[board.player_colour])
+
+    animate(board, solution)
+
+    print(solution)
 
 class Board:
     #constructor class
@@ -34,7 +40,8 @@ class Board:
         self.pieces = starting_state["pieces"]
         self.goals = GAME_SOLUTIONS[self.player_colour]
         self.board = None
-        #self.create_board()
+        
+        self.create_board()
 
     #prints out the current game state
     #board state is no longer stored
@@ -50,14 +57,14 @@ class Board:
         ran = range(-3, +3 + 1)
 
         for qr in [(q, r) for q in ran for r in ran if -q - r in ran]:
+            out_board[qr] = ""
 
-        # for i in range(-3,4,1):
-        #     for j in range(-3-(i<0)*i,4-(i>0)*i,1):
-            out_board[qr] = None
         for piece in self.pieces:
             out_board[tuple(piece)] = self.player_colour
+
         for block in self.blocks:
             out_board[tuple(block)] = "blk"
+
         self.board = out_board
         return out_board
 
@@ -74,29 +81,38 @@ class Board:
     #     return (move in self.struct and 
 
 
-def findmoves(board, pos):
+def findmoves(board, poslist):
 
     #list of all moves in all direction
     moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
     posmoves = []
+    #print(type(poslist))
 
     # create a list of all new positions given start pos
-    for move in moves:
-        posmoves.append(add(pos, move))
-            
-    # check and calcluate if any jumps need to take place
+    for i in range(len(poslist)):
         
-    jmp = []
-    for tup in posmoves:
-        if (tup in board.blocks or tup in board.pieces):
-            jmp.append(add(tup,diff(tup,pos)))
-        else:
-            jmp.append(tup)
+
+        for move in moves:
+            
+            temp = [list(x) for x in poslist]
+            
+            temp[i][0] = temp[i][0]+move[0]
+            temp[i][1] = temp[i][1]+move[1]
+            
+            if (temp[i] in board.blocks or temp[i] in [list(x) for x in poslist]):
+                temp[i][0] = temp[i][0]+move[0]
+                temp[i][1] = temp[i][1]+move[1]
+
+            tempf = [tuple(l) for l in temp]    
+            posmoves.append(tuple(tempf))
+            
+
+    # check and calcluate if any jumps need to take place
 
     # remove any moves that fall on a new block or outside the board
 
-    sol = [tuple(tup) for tup in jmp if (tuple(tup) in board.board) and (tup not in board.blocks) and (tup not in board.pieces)]
-        
+    sol = [tuple(movelist) for movelist in posmoves if isvalidmove(board, movelist)]
+    #print(sol)
     return sol
 
 # Adapted from https://eddmann.com/posts/depth-first-search-and-breadth-first-search-in-python/
@@ -114,14 +130,28 @@ def bfs(graph, start):
     return visited
 
 def bfs_paths(board, start, goal):
+    
+    #print(goal)
+    start = tuple(tuple(x) for x in start)
+    #print(start)
     queue = [(start, [start])]
+    #print(queue)
+
     while queue:
+        #print(queue)
         (vertex, path) = queue.pop(0)
-        graph = {vertex: set(findmoves(board, vertex))}
-        for next in graph[vertex] - set(path):
-            if next in goal:
+        
+        # graph = {vertex: set(findmoves(board, vertex))}
+        # print(findmoves(board, vertex))
+        #print(path)
+        for next in set(tuple(findmoves(board, vertex))) - set(path):
+            #print(next)
+            if can_exit(next, goal):
                 yield path + [next]
             else:
+                #print("next: {0}".format(next))
+                #temp = tuple(set(next) - can_exit(next, goal))
+                #print("temp: {0}".format(temp))
                 queue.append((next, path + [next]))
 
 def shortest_path(board, start, goal):
@@ -132,14 +162,49 @@ def shortest_path(board, start, goal):
 
 # -------------------------------------------------------------------
 
+def animate(board, solution):
+    for move in solution:
+        board.pieces = move
+        board.debug_print()
+        time.sleep(1)
+
+
+
+
+def can_exit(move, goal):
+    for m in move:
+        if m not in goal:
+            # print("left from {0}".format(m))
+            return False
+    return True
+
+
+def check_win(move, goal):
+    if (len(move) == 1 and can_exit(move, goal)):
+        return True
+    return False
+
+
+
 def add(a,b):
     return [x+y for x,y in zip(a,b)]
 
 def diff(a,b):
     return [x-y for x,y in zip(a,b)]
 
+def cubeify(hexpos):
+    return (hexpos[0], hexpos[1], -hexpos[0]-hexpos[1])
 
+def hexify(cubepos):
+    return (cubepos[0], cubepos[1])
 
+def isvalidmove(board, move):
+
+    flag = True
+    for tup in move:
+        if not (tuple(tup) in board.board) and (tup not in board.blocks) and (len(move) == len(set(move))):
+            flag = False
+    return flag
 
 
 def print_board(board_dict, message="", debug=False, **kwargs):
