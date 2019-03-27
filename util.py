@@ -13,11 +13,20 @@ def findmoves(pos):
 
 
 
-a = set([[1,1], [2,3]])
+a = [(1,2), (2,3)]
 
-b = [2,3]
 
-print(set(a))
+
+for i in range(len(a)):
+	if a[i] == (1,2):
+		a[i] = (0,0)
+
+
+
+
+print(a)
+
+
 
 
 
