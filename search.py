@@ -11,8 +11,8 @@ import copy
 import time
 
 #game solutions as defined by project spec
-GAME_SOLUTIONS = {"red": [(3,-3), (3,-2), (3,-1), (3,0)], "green": [(-3,3), (-2,3), (-1,3), (0,3)],
-                 "blue":[(0,-3), (-1,-2), (-2,-1), (-3,0)]}
+
+GAME_SOLUTIONS = {"red": [(3,-3), (3,-2), (3,-1), (3,0)], "green": [(-3,3), (-2,3), (-1,3), (0,3)], "blue":[(0,-3), (-1,-2), (-2,-1), (-3,0)]}
 
 OFF_BOARD = {
     "red": ((4,-2),),
@@ -24,17 +24,26 @@ OFF_BOARD = {
 
 #currently set run debug_print
 def main():
+    
+    
+
+
     with open(sys.argv[1]) as file:
         data = json.load(file)
     board = Board(data)
     board.debug_print()
     
-    solution = shortest_path(board, board.pieces, GAME_SOLUTIONS[board.player_colour])
 
+    # print(shortest_path_bfs(board, board.pieces, GAME_SOLUTIONS[board.player_colour]))
+
+    solution = bfs_paths_new(board, board.pieces, GAME_SOLUTIONS[board.player_colour])
+
+    
     animate(board, solution)
 
     print(solution)
-    
+
+
 
 class Board:
     #constructor class
@@ -124,16 +133,51 @@ def findmoves(board, poslist):
     sol = [movelist for movelist in posmoves if isvalidmove(board, movelist)]
     
     for i in range(len(poslist)):
-        templist =list(poslist)
+        templist = list(poslist)
         if templist[i] in board.goals:
             templist[i] = board.exit[0]
             sol.append(tuple(templist))
 
     
-    return sol
+    return tuple(sol)
 
 # Adapted from https://eddmann.com/posts/depth-first-search-and-breadth-first-search-in-python/
 # ---------------------------------------------------------------
+
+
+def reconstruct_path(prev_dict, end_state):
+    path = []
+    state = end_state
+    while prev_dict[state] is not None:
+        path.append(state)
+        state=prev_dict[state]
+    return path[::-1]
+
+
+def bfs_paths_new(board, start, goal):
+    
+    vert_prev = {tuple(tuple(x) for x in start): None}
+    queue = [tuple(tuple(x) for x in start)]
+    
+    while queue and not check_win(queue[-1], board):
+        vertex = queue.pop(0)
+
+        for move in findmoves(board, vertex):
+            # if move in vert_prev:
+            #     continue
+            queue.append(move)
+            vert_prev[move] = vertex
+    
+    if queue:
+        goal = queue[-1]
+        path = reconstruct_path(vert_prev, goal)
+        return path
+    else:
+        print("No path found...")
+
+
+
+
 
 def bfs(graph, start):
     visited, queue = set(), [start]
@@ -156,7 +200,65 @@ def bfs_paths(board, start, goal):
 
     while queue:
         
-        (vertex, path) = queue.pop(0)
+        vertex, path = queue.pop(0)
+        
+        
+        for next in set(findmoves(board, vertex)) - set(path):
+           
+            if check_win(next,board):
+                yield path + [next]
+            else:
+                
+                queue.append((next, path + [next]))
+
+def shortest_path_bfs(board, start, goal):
+    try:
+        return next(bfs_paths(board, start, goal))
+    except StopIteration:
+        return None
+
+# -------------------------------------------------------------------
+
+
+def dfs_paths(board, start, goal):
+    
+    
+    start = tuple(tuple(x) for x in start)
+    
+    stack = [(start, [start])]
+    
+
+    while stack:
+        
+        (vertex, path) = stack.pop(-1)
+        
+        
+        for next in set(findmoves(board, vertex)) - set(path):
+           
+            if check_win(next,board):
+                yield path + [next]
+            else:
+                
+                stack.append((next, path + [next]))
+
+
+def shortest_path_dfs(board, start, goal):
+    try:
+        return next(dfs_paths(board, start, goal))
+    except StopIteration:
+        return None
+
+
+def dls_paths(board, start, goal, depth):
+
+    start = tuple(tuple(x) for x in start)
+    
+    stack = [(start, [start]), 0]
+    
+
+    while stack and (len(stack[-1][1]) <= depth):
+        
+        (vertex, path) = stack.pop(-1)
         
         
         for next in set(tuple(findmoves(board, vertex))) - set(path):
@@ -165,15 +267,21 @@ def bfs_paths(board, start, goal):
                 yield path + [next]
             else:
                 
-                queue.append((next, path + [next]))
+                stack.append((next, path + [next]))
+    
 
-def shortest_path(board, start, goal):
+def shortest_path_dls(board, start, goal, depth):
     try:
-        return next(bfs_paths(board, start, goal))
+        return next(dls_paths(board, start, goal, depth))
     except StopIteration:
         return None
 
-# -------------------------------------------------------------------
+
+
+
+
+
+
 
 def animate(board, solution):
     
@@ -220,9 +328,9 @@ def isvalidmove(board, move):
     for tup in move:
         
         
-        if((len(move) != len(set(move)) or (tuple(tup) not in board.board and tup not in board.blocks))):
+        if((len(move) != len(set(move)) or (tup not in board.board) or (list(tup) in board.blocks))):
             flag = False
-            
+          
     return flag
 
 
