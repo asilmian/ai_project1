@@ -1,0 +1,19 @@
+Board:
+- player_colour
+
+
+
+State:
+Attr:
+- poslis
+- parent
+- board
+
+
+Methods:
+- find_successors
+- eval_score
+- is_goal
+- find_move(self, other)
+
+

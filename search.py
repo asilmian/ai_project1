@@ -21,7 +21,6 @@ OFF_BOARD = {
 }
 
 
-
 #currently set run debug_print
 def main():
     
@@ -42,6 +41,11 @@ def main():
     animate(board, solution)
 
     print(solution)
+
+
+
+
+
 
 
 
