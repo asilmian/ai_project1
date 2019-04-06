@@ -16,7 +16,7 @@ from math import sqrt
 
 #=================CONSTANTS======================================#
 
-DEBUG = 0        #use to turn on debugging 
+DEBUG = 1        #use to turn on debugging 
 BOILER_PLATE_LENGTH = 45
 BLOCK = "blk"
 
@@ -28,25 +28,10 @@ BLUE = "blue"
 GOAL_POSITIONS = {RED : [[3,-3], [3, -2], [3, -1], [3, 0]],
                  GREEN: [[-3,3], [-2, 3], [-1, 3], [0, 3]],    
                  BLUE: [[-3,0], [-2, -1], [-1, -2], [0, -3]]}
-                 
-EXIT_POSITION = [10,10]   #to represent an offboard piece
 
-#================================================================#
-
-#=================CONSTANTS======================================#
-
-DEBUG = 0        #use to turn on debugging 
-BOILER_PLATE_LENGTH = 45
-BLOCK = "blk"
-
-RED = "red"
-GREEN = "green"
-BLUE = "blue"
-
-#exit position for each player
-GOAL_POSITIONS = {RED : [[3,-3], [3, -2], [3, -1], [3, 0]],
-                 GREEN: [[-3,3], [-2, 3], [-1, 3], [0, 3]],    
-                 BLUE: [[-3,0], [-2, -1], [-1, -2], [0, -3]]}
+EUCLIDIAN_GOALS = {RED: [[4,-3], [4,-2], [4,-1]], 
+                   GREEN: [[-3,4], [-2,4], [-1,4]] , 
+                   BLUE: [[-3,-1], [-2,-2], [-1,-3]]}
                  
 EXIT_POSITION = [10,10]   #to represent an offboard piece
 
@@ -59,28 +44,14 @@ def main():
 
 
     board = Board(data)
+    if (DEBUG):
+        board.debug_print()
     solution = a_star_search(board)
 
     if (DEBUG):
-        board.debug_print()
         animate(board,solution)
 
     print_solution(solution)
-
-    # for stat in board.initial_state.children():
-
-    #     print(stat.poslist, stat.total_cost)
-   
-    # goals = [[4,-3], [4,-2], [4,-1]]
-    # piece_position = [-3,1]
-    # cube_goals = [cubify(x) for x in goals]
-    # cube_pos = cubify(piece_position)
-
-    # h_n = 0
-    # h_n += min([euclidean_distance(piece_position, x) for x in cube_goals])
-
-    # print(h_n)
-
 
 #=======================Classes==================================#
 class Board:
@@ -131,9 +102,9 @@ class State:
     i.e where each movable piece is and where it can possibly move
     """
 
-    def __init__(self, poslist, parent, board, cost):
+    def __init__(self, poslist, parent_state, board, cost):
         self.poslist = poslist
-        self.parent = parent
+        self.parent_state = parent_state
         self.obstacles = board.blocks + poslist
         self.board = board
         self.travel_cost = cost
@@ -149,17 +120,25 @@ class State:
     def __hash__(self):
         return hash(tuple(tuple(x) for x in self.poslist))
 
-    def children(self):
-        #need to rename this to something better. 
-        moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
+    def child_states(self):
+        """
+        finds the set of next possible states from the current state
+        """
+        move_actions = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
         states = []
         
         #for each piece
         for i in range(len(self.poslist)):
             if self.poslist[i] not in EXIT_POSITION:
 
+                #if the piece in question is in the final row, add make an exit action
+                if self.poslist[i] in self.board.final_row:
+                    temp = deepcopy(self.poslist)
+                    temp[i] = EXIT_POSITION
+                    states.append(State(temp, self, self.board, self.travel_cost + 1))
+
                 #create all move actions
-                for move in moves:
+                for move in move_actions:
                     
                     temp = deepcopy(self.poslist)
                     
@@ -176,13 +155,6 @@ class State:
                     if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
 
                         states.append(State(temp, self, self.board, self.travel_cost + 1))
-                
-                #if the piece in question is in the final row, add make an exit action
-                if self.poslist[i] in self.board.final_row:
-                    temp = deepcopy(self.poslist)
-                    temp[i] = EXIT_POSITION
-                    states.append(State(temp, self, self.board, self.travel_cost + 1))
-
         return states
 
 
@@ -216,15 +188,14 @@ def a_star_search(board):
 
     #while not all pieces are of the board
     while queue and not queue[0].is_goal():
-        #print(str(queue) + '\n')
-        parent = queue.pop(0)
+        parent_state = queue.pop(0)
         
         #check child states
-        for child in parent.children():
+        for child in parent_state.child_states():
             if child in seen:
                 continue
             queue.append(child)
-            seen[child] = parent
+            seen[child] = parent_state
 
         #sort the queue based on the total cost of each state
         queue.sort(key= operator.attrgetter('total_cost'))
@@ -245,29 +216,25 @@ def euclidean_heuristic(state : State) -> float:
     
     h_n = 0
     colour = state.board.player_colour
+    goals = EUCLIDIAN_GOALS[colour]
 
     for piece_position in state.poslist:
         if piece_position == EXIT_POSITION:
             h_n += 0
 
-        elif colour == RED:
-            goals = [[4,-3], [4,-2], [4,-1]]
-            cube_pos = cubify(piece_position)
-            cube_goals = [cubify(x) for x in goals]
-            h_n += min(([(cube_pos[0]-x[0])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
-
-        elif colour == GREEN:
-            goals = [[-3,4], [-2,4], [-1,4]]
-            cube_pos = cubify(piece_position)
-            cube_goals = [cubify(x) for x in goals]
-            h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
-        
+        #evaluate current state based on player colour
         else:
-            goals = [[-3,-1], [-2,-2], [-1,-3]]
             cube_pos = cubify(piece_position)
             cube_goals = [cubify(x) for x in goals]
 
-            h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+            if colour == RED:
+                h_n += min(([(cube_pos[0]-x[0])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+
+            elif colour == GREEN:
+                h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+        
+            else:
+                h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
 
     return h_n/2
 
@@ -290,9 +257,9 @@ def reconstruct_path(end_state):
     actions = []
     curr_state = end_state
 
-    while curr_state.parent:
+    while curr_state.parent_state:
         actions.append(curr_state.poslist)
-        curr_state = curr_state.parent
+        curr_state = curr_state.parent_state
     actions.append(curr_state.poslist)
 
     #return action list in reverse order
