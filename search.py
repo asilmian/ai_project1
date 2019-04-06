@@ -95,7 +95,7 @@ class State:
         self.obstacles = board.blocks + poslist
         self.board = board
         self.travel_cost = cost
-        self.total_cost = self.travel_cost + hueristic(self)
+        self.total_cost = self.travel_cost + heuristic(self)
     
     def __str__(self):
 
@@ -183,7 +183,7 @@ def a_star_search(board):
         return None
 
 
-def hueristic(state : State) -> int:
+def heuristic(state : State) -> int:
     h_n = 0
     if state.board.player_colour == "red":
         for piece_postion in state.poslist:
