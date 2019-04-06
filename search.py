@@ -25,11 +25,11 @@ GREEN = "green"
 BLUE = "blue"
 
 #exit position for each player
-GOAL_POSITIONS = {RED : [[3,-3], [3, -2], [3, -1], [3, 0]],
+FINAL_ROWS = {RED : [[3,-3], [3, -2], [3, -1], [3, 0]],
                  GREEN: [[-3,3], [-2, 3], [-1, 3], [0, 3]],    
                  BLUE: [[-3,0], [-2, -1], [-1, -2], [0, -3]]}
 
-EUCLIDIAN_GOALS = {RED: [[4,-3], [4,-2], [4,-1]], 
+GOAL_ROWS = {RED: [[4,-3], [4,-2], [4,-1]], 
                    GREEN: [[-3,4], [-2,4], [-1,4]] , 
                    BLUE: [[-3,-1], [-2,-2], [-1,-3]]}
                  
@@ -53,6 +53,8 @@ def main():
 
         print_solution(solution)
 
+    
+
 #=======================Classes==================================#
 class Board:
     """
@@ -67,8 +69,10 @@ class Board:
         self.initial_state = State(self.pieces, None, self, 0)
         self.printable_board = None    
         self.create_printable_board()
-        self.final_row = GOAL_POSITIONS[self.player_colour]
-
+        self.final_row = FINAL_ROWS[self.player_colour]
+        self.goal_row = GOAL_ROWS[self.player_colour]
+        self.cost_dict = {}
+        self.create_cost_dict()
 
     def debug_print(self):
         out_state = self.create_printable_board()
@@ -95,6 +99,40 @@ class Board:
         
         return out_board
 
+    def create_cost_dict(self):
+
+        cost_dict = {}
+
+        queue = []
+
+        for tile in self.goal_row:
+            cost_dict[tuple(tile)] = 0
+            queue.append(tuple(tile))
+
+        while queue:
+            current_tile = queue.pop(0)
+            next_step = self.find_adjacent_tiles(current_tile)
+            for step in next_step:
+                
+                if tuple(step) not in cost_dict:
+
+                    cost_dict[tuple(step)] = cost_dict[current_tile] + 1
+                    queue.append(tuple(step))
+
+        self.cost_dict = {}
+        return cost_dict
+
+
+    def find_adjacent_tiles(self, tile):
+        moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
+        
+        all_tiles = []
+        for move in moves:
+            all_tiles.append([a+b for a,b in zip(tile, move)])
+
+        return [x for x in all_tiles if tuple(x) in self.printable_board 
+                                and x not in self.blocks]
+
 
 class State:
     """
@@ -108,7 +146,7 @@ class State:
         self.obstacles = board.blocks + poslist
         self.board = board
         self.travel_cost = cost
-        self.total_cost = self.travel_cost + euclidean_heuristic(self)
+        self.total_cost = self.travel_cost + path_heuristic(self)
     
     def __str__(self):
 
@@ -220,11 +258,11 @@ def euclidean_heuristic(state : State) -> float:
     
     h_n = 0
     colour = state.board.player_colour
-    goals = EUCLIDIAN_GOALS[colour]
+    goals = GOAL_ROWS[colour]
 
     for piece_position in state.poslist:
         if piece_position == EXIT_POSITION:
-            h_n -= 5
+            h_n -= 0
 
         #evaluate current state based on player colour
         else:
@@ -241,6 +279,25 @@ def euclidean_heuristic(state : State) -> float:
                 h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
 
     return h_n/2
+
+
+def path_heuristic(state : State) -> float:
+
+    h_n = 0
+    colour = state.board.player_colour
+    goals = GOAL_ROWS[colour]
+
+    for piece_position in state.poslist:
+        if piece_position == EXIT_POSITION:
+            h_n -= 0
+
+        else:
+            h_n += state.board.cost_dict[tuple(piece_position)]
+
+    return h_n/2
+
+
+
 
 
 def cubify(pos):
