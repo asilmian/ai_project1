@@ -12,6 +12,26 @@ import json
 from copy import deepcopy
 import time
 import operator
+from math import sqrt
+
+#=================CONSTANTS======================================#
+
+DEBUG = 0        #use to turn on debugging 
+BOILER_PLATE_LENGTH = 45
+BLOCK = "blk"
+
+RED = "red"
+GREEN = "green"
+BLUE = "blue"
+
+#exit position for each player
+GOAL_POSITIONS = {RED : [[3,-3], [3, -2], [3, -1], [3, 0]],
+                 GREEN: [[-3,3], [-2, 3], [-1, 3], [0, 3]],    
+                 BLUE: [[-3,0], [-2, -1], [-1, -2], [0, -3]]}
+                 
+EXIT_POSITION = [10,10]   #to represent an offboard piece
+
+#================================================================#
 
 #=================CONSTANTS======================================#
 
@@ -41,12 +61,26 @@ def main():
     board = Board(data)
     solution = a_star_search(board)
 
-    if (DEBUG){
+    if (DEBUG):
         board.debug_print()
         animate(board,solution)
-    }
 
-    print_solution(solution) 
+    print_solution(solution)
+
+    # for stat in board.initial_state.children():
+
+    #     print(stat.poslist, stat.total_cost)
+   
+    # goals = [[4,-3], [4,-2], [4,-1]]
+    # piece_position = [-3,1]
+    # cube_goals = [cubify(x) for x in goals]
+    # cube_pos = cubify(piece_position)
+
+    # h_n = 0
+    # h_n += min([euclidean_distance(piece_position, x) for x in cube_goals])
+
+    # print(h_n)
+
 
 #=======================Classes==================================#
 class Board:
@@ -103,7 +137,7 @@ class State:
         self.obstacles = board.blocks + poslist
         self.board = board
         self.travel_cost = cost
-        self.total_cost = self.travel_cost + hueristic(self)
+        self.total_cost = self.travel_cost + euclidean_heuristic(self)
     
     def __str__(self):
 
@@ -166,6 +200,7 @@ class State:
 #================================================================#
 
 
+
 #===============Search Functions=================================#
 
 
@@ -181,8 +216,9 @@ def a_star_search(board):
 
     #while not all pieces are of the board
     while queue and not queue[0].is_goal():
-
+        #print(str(queue) + '\n')
         parent = queue.pop(0)
+        
         #check child states
         for child in parent.children():
             if child in seen:
@@ -201,23 +237,50 @@ def a_star_search(board):
         return None
 
 
-def hueristic(state : State) -> int:
+def euclidean_heuristic(state : State) -> float:
     """
     estimates the cost to end state from current state
+    by using 3d cubic euclidian distance
     """
+    
     h_n = 0
+    colour = state.board.player_colour
 
-    #estimation depends on playercolor  (need to get rid of magic numbers)
-    if state.board.player_colour == "red":
-        for piece_postion in state.poslist:
-            h_n += 3 - piece_postion[0]
-    if state.board.player_colour == "blue":
-        for piece_postion in state.poslist:
-            h_n += -3 - (piece_postion[0] + piece_postion[1])
-    if state.board.player_colour == "green":
-        for piece_postion in state.poslist:
-            h_n += 3 - piece_postion[1]
-    return h_n
+    for piece_position in state.poslist:
+        if piece_position == EXIT_POSITION:
+            h_n += 0
+
+        elif colour == RED:
+            goals = [[4,-3], [4,-2], [4,-1]]
+            cube_pos = cubify(piece_position)
+            cube_goals = [cubify(x) for x in goals]
+            h_n += min(([(cube_pos[0]-x[0])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+
+        elif colour == GREEN:
+            goals = [[-3,4], [-2,4], [-1,4]]
+            cube_pos = cubify(piece_position)
+            cube_goals = [cubify(x) for x in goals]
+            h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+        
+        else:
+            goals = [[-3,-1], [-2,-2], [-1,-3]]
+            cube_pos = cubify(piece_position)
+            cube_goals = [cubify(x) for x in goals]
+
+            h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+
+    return h_n/2
+
+
+def cubify(pos):
+    """
+    transform into 3d cubic co-ordinates
+    """
+    return [pos[0], pos[1], -pos[0]-pos[1]]  
+
+
+
+
 
 def reconstruct_path(end_state):
     """
