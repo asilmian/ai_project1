@@ -131,7 +131,7 @@ class State:
                         temp[i][1] = temp[i][1] + move[1]
                     
                     #filter moves based on whether they land on the board
-                    if tuple(temp[i]) in self.board.printable_board:
+                    if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
 
                         states.append(State(temp, self, self.board, self.travel_cost + 1))
                 
