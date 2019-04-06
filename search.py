@@ -37,11 +37,13 @@ class Board:
         self.goal = None
         self.final_row = None
         self.fetch_goal_info()
-
-    #prints out the current game state
-    #board state is no longer stored
     
+
+
     def fetch_goal_info(self):
+        """
+        gets the goal state relative to the colour of the player piece
+        """
         self.goal = [10,10]
 
         if self.player_colour == 'red':
@@ -59,9 +61,11 @@ class Board:
         out_state = self.create_printable_board()
         print_board(out_state, "debug_printing", True)
 
-    #helper function for debug_print, creates the board
-    #board is essentially a dictionary
     def create_printable_board(self):
+        """
+        helper function for debug_print, creates the board
+        board is essentially a dictionary
+        """
         out_board = {}
 
         ran = range(-3, +3 + 1)
@@ -100,16 +104,15 @@ class State:
         return hash(tuple(tuple(x) for x in self.poslist))
 
     def children(self):
-        
-
+        #need to rename this to something better. 
         moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
         states = []
         
-
+        #for each piece
         for i in range(len(self.poslist)):
-            
             if self.poslist[i] not in self.board.goal:
-                
+
+                #create all moves
                 for move in moves:
                     
                     temp = deepcopy(self.poslist)
@@ -117,15 +120,18 @@ class State:
                     temp[i][0] = temp[i][0] + move[0] 
                     temp[i][1] = temp[i][1] + move[1] 
                     
+                    #jump over obstacle move
                     if temp[i] in self.obstacles:
                     
                         temp[i][0] = temp[i][0] + move[0] 
                         temp[i][1] = temp[i][1] + move[1]
                     
+                    #dont know what this is doing
                     if tuple(temp[i]) in self.board.printable_board:
 
                         states.append(State(temp, self, self.board))
                 
+                #move off board, should'nt this be at the top?
                 if self.poslist[i] in self.board.final_row:
                     temp = self.poslist[:]
                     temp[i] = self.board.goal
@@ -133,7 +139,11 @@ class State:
 
         return states
 
+
     def is_goal(self):
+        """
+        checks if all pieces are off board
+        """
         flag = True
         for pos in self.poslist:
             if pos != self.board.goal:
@@ -143,18 +153,18 @@ class State:
 
 def bfs(board):
 
-
-
     start = board.initial_state
 
     seen = {}
 
     queue = [start]
 
+    #while not all pieces are of the board
     while queue and not queue[-1].is_goal():
 
         parent = queue.pop(0)
 
+        #check child states
         for child in parent.children():
             if child in seen:
                 continue
@@ -178,11 +188,11 @@ def reconstruct_path(end_state):
         moves.append(move.poslist)
         move = move.parent
 
+    #what is this returning?
     return moves[::-1]
 
 def animate(board, solution):
-    
-
+    #animates the solution movements
     for move in solution:
         board.pieces = move
         board.debug_print()
