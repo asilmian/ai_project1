@@ -3,6 +3,8 @@ COMP30024 Artificial Intelligence, Semester 1 2019
 Solution to Project Part A: Searching
 
 Authors: 
+John Stephenson (insert student id)
+Asil Mian (867252)
 """
 
 import sys
@@ -11,7 +13,25 @@ from copy import deepcopy
 import time
 import operator
 
-GOAL = [10,10]
+#=================CONSTANTS======================================#
+
+DEBUG = 0        #use to turn on debugging 
+BOILER_PLATE_LENGTH = 45
+BLOCK = "blk"
+
+RED = "red"
+GREEN = "green"
+BLUE = "blue"
+
+#exit position for each player
+GOAL_POSITIONS = {RED : [[3,-3], [3, -2], [3, -1], [3, 0]],
+                 GREEN: [[-3,3], [-2, 3], [-1, 3], [0, 3]],    
+                 BLUE: [[-3,0], [-2, -1], [-1, -2], [0, -3]]}
+                 
+EXIT_POSITION = [10,10]   #to represent an offboard piece
+
+#================================================================#
+
 
 def main():
     with open(sys.argv[1]) as file:
@@ -19,17 +39,22 @@ def main():
 
 
     board = Board(data)
-    board.debug_print()
-
     solution = a_star_search(board)
 
-    animate(board,solution)
-    # TODO: Search for and output winning sequence of moves
-    # ...
-    print(solution)
+    if (DEBUG){
+        board.debug_print()
+        animate(board,solution)
+    }
 
+    print_solution(solution) 
+
+#=======================Classes==================================#
 class Board:
-    #constructor class
+    """
+    Class for representing a board.
+    containes player information, and block information
+    """
+
     def __init__(self, starting_state):
         self.player_colour = starting_state["colour"]
         self.blocks = starting_state["blocks"]
@@ -37,26 +62,7 @@ class Board:
         self.initial_state = State(self.pieces, None, self, 0)
         self.printable_board = None    
         self.create_printable_board()
-        self.goal = GOAL
-        self.final_row = None
-        self.fetch_goal_info()
-    
-
-
-    def fetch_goal_info(self):
-        """
-        gets the goal state relative to the colour of the player piece
-        """
-
-        if self.player_colour == 'red':
-            self.final_row = [[3,-3], [3, -2], [3, -1], [3, 0]]
-        
-        if self.player_colour == 'green':
-            self.final_row = [[-3,3], [-2, 3], [-1, 3], [0, 3]]
-
-        if self.player_colour == 'blue':
-            self.final_row = [[-3,0], [-2, -1], [-1, -2], [0, -3]]
-
+        self.final_row = GOAL_POSITIONS[self.player_colour]
 
 
     def debug_print(self):
@@ -65,11 +71,10 @@ class Board:
 
     def create_printable_board(self):
         """
-        helper function for debug_print, creates the board
-        board is essentially a dictionary
+        helper function for debug_print
+        creates the board as a dictionary
         """
         out_board = {}
-
         ran = range(-3, +3 + 1)
 
         for qr in [(q, r) for q in ran for r in ran if -q - r in ran]:
@@ -79,7 +84,7 @@ class Board:
             out_board[tuple(piece)] = self.player_colour
 
         for block in self.blocks:
-            out_board[tuple(block)] = "blk"
+            out_board[tuple(block)] = BLOCK
 
         self.printable_board = out_board
         
@@ -87,7 +92,10 @@ class Board:
 
 
 class State:
-    
+    """
+    Class represents a state
+    i.e where each movable piece is and where it can possibly move
+    """
 
     def __init__(self, poslist, parent, board, cost):
         self.poslist = poslist
@@ -114,9 +122,9 @@ class State:
         
         #for each piece
         for i in range(len(self.poslist)):
-            if self.poslist[i] not in self.board.goal:
+            if self.poslist[i] not in EXIT_POSITION:
 
-                #create all moves
+                #create all move actions
                 for move in moves:
                     
                     temp = deepcopy(self.poslist)
@@ -124,21 +132,21 @@ class State:
                     temp[i][0] = temp[i][0] + move[0] 
                     temp[i][1] = temp[i][1] + move[1] 
                     
-                    #if any moves land on obstacles, jump one tile further
+                    #if any move action lands on obstacle, add jump action
                     if temp[i] in self.obstacles:
                     
                         temp[i][0] = temp[i][0] + move[0] 
                         temp[i][1] = temp[i][1] + move[1]
                     
-                    #filter moves based on whether they land on the board
+                    #filter moves based on whether they land on the board or on obstacles
                     if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
 
                         states.append(State(temp, self, self.board, self.travel_cost + 1))
                 
-                #if the piece in question is in the final row, add an exit move
+                #if the piece in question is in the final row, add make an exit action
                 if self.poslist[i] in self.board.final_row:
                     temp = deepcopy(self.poslist)
-                    temp[i] = self.board.goal
+                    temp[i] = EXIT_POSITION
                     states.append(State(temp, self, self.board, self.travel_cost + 1))
 
         return states
@@ -146,21 +154,29 @@ class State:
 
     def is_goal(self):
         """
-        checks if all pieces are off board
+        returns true if all pieces are off the board
         """
         flag = True
         for pos in self.poslist:
-            if pos != self.board.goal:
+            if pos != EXIT_POSITION:
                 flag = False
 
         return flag
 
+#================================================================#
+
+
+#===============Search Functions=================================#
+
+
 def a_star_search(board):
-
+    """
+    search the board for the solution and return the path 
+    leading to the solution if one is found
+    """
     start = board.initial_state
-
+    #seen dictionary to prevent going to already seen states
     seen = {}
-
     queue = [start]
 
     #while not all pieces are of the board
@@ -173,10 +189,12 @@ def a_star_search(board):
                 continue
             queue.append(child)
             seen[child] = parent
+
+        #sort the queue based on the total cost of each state
         queue.sort(key= operator.attrgetter('total_cost'))
 
+    #return if solution found
     if queue:
-        
         return reconstruct_path(queue[0])
 
     else:
@@ -184,7 +202,12 @@ def a_star_search(board):
 
 
 def hueristic(state : State) -> int:
+    """
+    estimates the cost to end state from current state
+    """
     h_n = 0
+
+    #estimation depends on playercolor  (need to get rid of magic numbers)
     if state.board.player_colour == "red":
         for piece_postion in state.poslist:
             h_n += 3 - piece_postion[0]
@@ -197,18 +220,74 @@ def hueristic(state : State) -> int:
     return h_n
 
 def reconstruct_path(end_state):
-    moves = []
-    move = end_state
+    """
+    track back the path to the initial state
+    from the end_state
+    """
+    actions = []
+    curr_state = end_state
 
-    while move.parent:
-        moves.append(move.poslist)
-        move = move.parent
+    while curr_state.parent:
+        actions.append(curr_state.poslist)
+        curr_state = curr_state.parent
+    actions.append(curr_state.poslist)
 
-    #what is this returning?
-    return moves[::-1]
+    #return action list in reverse order
+    return actions[::-1]
+
+#================================================================#
+
+
+#================Printing Functions==============================#
+
+def print_solution(solution):
+    """
+    Outputs the solution according to the project specification
+    """
+    print_boiler_plate()
+    for i in range(1, len(solution)):
+        print("{:11}".format(i) + " | " + print_move(solution[i-1], solution[i]))
+
+
+def print_boiler_plate():
+    """
+    Boiler plate for standard out
+    """
+    print(" action no. | standard output")
+    print("=" * BOILER_PLATE_LENGTH)
+
+def print_move(start_point, end_point):
+    """
+    Prints the action taking a piece from start_point to
+    end point
+    """
+    result_str = ""
+    for i in range(len(end_point)):
+        #find the piece that has moved
+        if (end_point[i] != start_point[i]):
+
+            #move action
+            if abs(end_point[i][0] - start_point[i][0]) == 1 or \
+                    abs(end_point[i][1] - start_point[i][1]) == 1:
+                result_str += "MOVE from {} to {}.".format(tuple(start_point[i]), tuple(end_point[i]))
+
+            #exit action
+            elif end_point[i] == EXIT_POSITION :
+                result_str += "EXIT from {}.".format(tuple(start_point[i]))
+
+            #jump action
+            else:
+                result_str += "JUMP from {} to {}.".format(tuple(start_point[i]), tuple(end_point[i]))
+            break
+    return result_str
+
+#================================================================#
+
 
 def animate(board, solution):
-    #animates the solution movements
+    """
+    displays an animation for the solution
+    """
     for move in solution:
         board.pieces = move
         board.debug_print()
