@@ -2,29 +2,28 @@
 COMP30024 Artificial Intelligence, Semester 1 2019
 Solution to Project Part A: Searching
 
-Authors: Asil Mian, John Stephenson
+Authors: 
 """
 
 import sys
 import json
+from copy import deepcopy
+import time
 
-#game solutions as defined by project spec
-GAME_SOLUTIONS = {"red": [(3,-3), (3,-2), (3,-1), (3,0)], "green": [(-3,3), (-2,3), (-1,3), (0,3)],
-                 "blue":[(0,-3), (-1,-2), (-2,-1), (-3,0)]}
-
-
-#currently set run debug_print
 def main():
     with open(sys.argv[1]) as file:
         data = json.load(file)
+
+
     board = Board(data)
     board.debug_print()
-    
-    #print(board.graph)
 
-    #print(board.findmoves([-2, -1]))
-    for piece in board.pieces:
-        print(shortest_path(board, tuple(piece), GAME_SOLUTIONS[board.player_colour]))
+    solution = bfs(board)
+
+    animate(board,solution)
+    # TODO: Search for and output winning sequence of moves
+    # ...
+    print(solution)
 
 class Board:
     #constructor class
@@ -32,109 +31,172 @@ class Board:
         self.player_colour = starting_state["colour"]
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
-        self.goals = GAME_SOLUTIONS[self.player_colour]
-        self.board = None
-        #self.create_board()
+        self.initial_state = State(self.pieces, None, self)
+        self.printable_board = None    
+        self.create_printable_board()
+        self.goal = None
+        self.final_row = None
+        self.fetch_goal_info()
+    
 
-    #prints out the current game state
-    #board state is no longer stored
+
+    def fetch_goal_info(self):
+        """
+        gets the goal state relative to the colour of the player piece
+        """
+        self.goal = [10,10]
+
+        if self.player_colour == 'red':
+            self.final_row = [[3,-3], [3, -2], [3, -1], [3, 0]]
+        
+        if self.player_colour == 'green':
+            self.final_row = [[-3,3], [-2, 3], [-1, 3], [0, 3]]
+
+        if self.player_colour == 'blue':
+            self.final_row = [[-3,0], [-2, -1], [-1, -2], [0, -3]]
+
+
+
     def debug_print(self):
-        out_state = self.create_board()
+        out_state = self.create_printable_board()
         print_board(out_state, "debug_printing", True)
 
-    #helper function for debug_print, creates the board
-    #board is essentially a dictionary
-    def create_board(self):
+    def create_printable_board(self):
+        """
+        helper function for debug_print, creates the board
+        board is essentially a dictionary
+        """
         out_board = {}
-        for i in range(-3,4,1):
-            for j in range(-3-(i<0)*i,4-(i>0)*i,1):
-                out_board[(i,j)] = 0
+
+        ran = range(-3, +3 + 1)
+
+        for qr in [(q, r) for q in ran for r in ran if -q - r in ran]:
+            out_board[qr] = ""
+
         for piece in self.pieces:
             out_board[tuple(piece)] = self.player_colour
+
         for block in self.blocks:
             out_board[tuple(block)] = "blk"
-        self.board = out_board
+
+        self.printable_board = out_board
+        
         return out_board
 
-    # def create_board_struct(self):
-    #     out_struct = {}
-    #     for i in range(-3,4,1):
-    #         for j in range(-3-(i<0)*i,4-(i>0)*i,1):
-    #             pos = [i,j]
-    #             out_struct[tuple(pos)] = set(self.findmoves(pos))
+
+class State:
+    
+
+    def __init__(self, poslist, parent, board):
+        self.poslist = poslist
+        self.parent = parent
+        self.obstacles = board.blocks + poslist
+        self.board = board
+    
+    def __str__(self):
+
+        return "{}".format(self.poslist)
+
+    def __repr__(self):
+        return str(self)
+
+    def __hash__(self):
+        return hash(tuple(tuple(x) for x in self.poslist))
+
+    def children(self):
+        #need to rename this to something better. 
+        moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
+        states = []
+        
+        #for each piece
+        for i in range(len(self.poslist)):
+            if self.poslist[i] not in self.board.goal:
+
+                #create all moves
+                for move in moves:
+                    
+                    temp = deepcopy(self.poslist)
+                    
+                    temp[i][0] = temp[i][0] + move[0] 
+                    temp[i][1] = temp[i][1] + move[1] 
+                    
+                    #jump over obstacle move
+                    if temp[i] in self.obstacles:
+                    
+                        temp[i][0] = temp[i][0] + move[0] 
+                        temp[i][1] = temp[i][1] + move[1]
+                    
+                    #dont know what this is doing
+                    if tuple(temp[i]) in self.board.printable_board:
+
+                        states.append(State(temp, self, self.board))
                 
-    #     self.graph = out_struct
+                #move off board, should'nt this be at the top?
+                if self.poslist[i] in self.board.final_row:
+                    temp = self.poslist[:]
+                    temp[i] = self.board.goal
+                    states.append(State(temp, self, self.board))
 
-    # def check_move(self, move):
-    #     return (move in self.struct and 
+        return states
 
 
-def findmoves(board, pos):
+    def is_goal(self):
+        """
+        checks if all pieces are off board
+        """
+        flag = True
+        for pos in self.poslist:
+            if pos != self.board.goal:
+                flag = False
 
-    #list of all moves in all direction
-    moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
-    posmoves = []
+        return flag
 
-    # create a list of all new positions given start pos
-    for move in moves:
-        posmoves.append(add(pos, move))
-            
-    # check and calcluate if any jumps need to take place
+def bfs(board):
+
+    start = board.initial_state
+
+    seen = {}
+
+    queue = [start]
+
+    #while not all pieces are of the board
+    while queue and not queue[-1].is_goal():
+
+        parent = queue.pop(0)
+
+        #check child states
+        for child in parent.children():
+            if child in seen:
+                continue
+            queue.append(child)
+            seen[child] = parent
+
+    if queue:
         
-    jmp = []
-    for tup in posmoves:
-        if (tup in board.blocks or tup in board.pieces):
-            jmp.append(add(tup,diff(tup,pos)))
-        else:
-            jmp.append(tup)
+        return reconstruct_path(queue[-1])
 
-    # remove any moves that fall on a new block or outside the board
-
-    sol = [tuple(tup) for tup in jmp if (tuple(tup) in board.board) and (tup not in board.blocks) and (tup not in board.pieces)]
-        
-    return sol
-
-# Adapted from https://eddmann.com/posts/depth-first-search-and-breadth-first-search-in-python/
-# ---------------------------------------------------------------
-
-def bfs(graph, start):
-    visited, queue = set(), [start]
-    while queue:
-        
-        vertex = queue.pop(0)
-        #print(queue)
-        if vertex not in visited:
-            visited.add(vertex)
-            queue.extend(graph[vertex] - visited)
-    return visited
-
-def bfs_paths(board, start, goal):
-    queue = [(start, [start])]
-    while queue:
-        (vertex, path) = queue.pop(0)
-        graph = {vertex: set(findmoves(board, vertex))}
-        for next in graph[vertex] - set(path):
-            if next in goal:
-                yield path + [next]
-            else:
-                queue.append((next, path + [next]))
-
-def shortest_path(board, start, goal):
-    try:
-        return next(bfs_paths(board, start, goal))
-    except StopIteration:
+    else:
         return None
 
-# -------------------------------------------------------------------
-
-def add(a,b):
-    return [x+y for x,y in zip(a,b)]
-
-def diff(a,b):
-    return [x-y for x,y in zip(a,b)]
 
 
+def reconstruct_path(end_state):
+    moves = []
+    move = end_state
 
+    while move.parent:
+        moves.append(move.poslist)
+        move = move.parent
+
+    #what is this returning?
+    return moves[::-1]
+
+def animate(board, solution):
+    #animates the solution movements
+    for move in solution:
+        board.pieces = move
+        board.debug_print()
+        time.sleep(1)
 
 
 def print_board(board_dict, message="", debug=False, **kwargs):
