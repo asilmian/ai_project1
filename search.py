@@ -49,9 +49,9 @@ def main():
     solution = a_star_search(board)
 
     if (DEBUG):
-        animate(board,solution)
+        #animate(board,solution)
 
-    print_solution(solution)
+        print_solution(solution)
 
 #=======================Classes==================================#
 class Board:
@@ -119,6 +119,9 @@ class State:
 
     def __hash__(self):
         return hash(tuple(tuple(x) for x in self.poslist))
+
+    def __eq__(self, other):
+        return self.poslist == other.poslist
 
     def child_states(self):
         """
@@ -189,14 +192,15 @@ def a_star_search(board):
     #while not all pieces are of the board
     while queue and not queue[0].is_goal():
         parent_state = queue.pop(0)
-        
         #check child states
         for child in parent_state.child_states():
             if child in seen:
                 continue
-            queue.append(child)
-            seen[child] = parent_state
-
+            else:
+                queue.append(child)
+                seen[child] = True
+        parent_state.board.pieces = parent_state.poslist
+        #parent_state.board.debug_print()
         #sort the queue based on the total cost of each state
         queue.sort(key= operator.attrgetter('total_cost'))
 
@@ -220,7 +224,7 @@ def euclidean_heuristic(state : State) -> float:
 
     for piece_position in state.poslist:
         if piece_position == EXIT_POSITION:
-            h_n += 0
+            h_n -= 5
 
         #evaluate current state based on player colour
         else:
