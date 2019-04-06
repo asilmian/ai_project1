@@ -10,6 +10,7 @@ import json
 from copy import deepcopy
 import time
 import operator
+from math import sqrt
 
 GOAL = [10,10]
 
@@ -28,6 +29,21 @@ def main():
     # ...
     print(solution)
 
+
+    # for stat in board.initial_state.children():
+
+    #     print(stat.poslist, stat.total_cost)
+   
+    # goals = [[4,-3], [4,-2], [4,-1]]
+    # piece_position = [-3,1]
+    # cube_goals = [cubify(x) for x in goals]
+    # cube_pos = cubify(piece_position)
+
+    # h_n = 0
+    # h_n += min([euclidean_distance(piece_position, x) for x in cube_goals])
+
+    # print(h_n)
+
 class Board:
     #constructor class
     def __init__(self, starting_state):
@@ -40,7 +56,7 @@ class Board:
         self.goal = GOAL
         self.final_row = None
         self.fetch_goal_info()
-    
+        
 
 
     def fetch_goal_info(self):
@@ -95,7 +111,7 @@ class State:
         self.obstacles = board.blocks + poslist
         self.board = board
         self.travel_cost = cost
-        self.total_cost = self.travel_cost + heuristic(self)
+        self.total_cost = self.travel_cost + euclidean_heuristic(self)
     
     def __str__(self):
 
@@ -159,14 +175,15 @@ def a_star_search(board):
 
     start = board.initial_state
 
-    seen = {}
+    seen = {start: None}
 
     queue = [start]
 
     #while not all pieces are of the board
     while queue and not queue[0].is_goal():
-
+        #print(str(queue) + '\n')
         parent = queue.pop(0)
+        
         #check child states
         for child in parent.children():
             if child in seen:
@@ -195,6 +212,64 @@ def heuristic(state : State) -> int:
         for piece_postion in state.poslist:
             h_n += 3 - piece_postion[1]
     return h_n
+
+
+def euclidean_heuristic(state : State) -> float:
+    
+    h_n = 0
+    
+
+    if state.board.player_colour == "red":
+        goals = [[4,-3], [4,-2], [4,-1]]
+
+        for piece_position in state.poslist:
+            if piece_position == GOAL:
+                h_n += 0
+
+            else:
+                cube_pos = cubify(piece_position)
+                cube_goals = [cubify(x) for x in goals]
+
+                # h_n += min([euclidean_distance(piece_position, x) for x in cube_goals])
+                h_n += min(([(cube_pos[0]-x[0])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+
+
+    if state.board.player_colour == "blue":
+        goals = [[-3,-1], [-2,-2], [-1,-3]]
+        for piece_position in state.poslist:
+            if piece_position == GOAL:
+                h_n += 0
+
+            else:
+                cube_pos = cubify(piece_position)
+                cube_goals = [cubify(x) for x in goals]
+
+                h_n += min(([(cube_pos[0]-x[0])**2 + (cube_pos[1]-x[1])**2 for x in cube_goals]))
+
+    if state.board.player_colour == "green":
+        goals = [[-3,4], [-2,4], [-1,4]]
+        for piece_position in state.poslist:
+            if piece_position == GOAL:
+                h_n += 0
+
+            else:
+                cube_pos = cubify(piece_position)
+                cube_goals = [cubify(x) for x in goals]
+
+                h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
+
+    
+
+
+    return h_n/2
+
+
+def cubify(pos):
+    return [pos[0], pos[1], -pos[0]-pos[1]]  
+
+
+
+
 
 def reconstruct_path(end_state):
     moves = []
