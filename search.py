@@ -31,7 +31,7 @@ class Board:
         self.player_colour = starting_state["colour"]
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
-        self.initial_state = State(self.pieces, None, self)
+        self.initial_state = State(self.pieces, None, self, 0)
         self.printable_board = None    
         self.create_printable_board()
         self.goal = None
@@ -87,11 +87,12 @@ class Board:
 class State:
     
 
-    def __init__(self, poslist, parent, board):
+    def __init__(self, poslist, parent, board, cost):
         self.poslist = poslist
         self.parent = parent
         self.obstacles = board.blocks + poslist
         self.board = board
+        self.cost = cost
     
     def __str__(self):
 
@@ -120,22 +121,22 @@ class State:
                     temp[i][0] = temp[i][0] + move[0] 
                     temp[i][1] = temp[i][1] + move[1] 
                     
-                    #jump over obstacle move
+                    #if any moves land on obstacles, jump one tile further
                     if temp[i] in self.obstacles:
                     
                         temp[i][0] = temp[i][0] + move[0] 
                         temp[i][1] = temp[i][1] + move[1]
                     
-                    #dont know what this is doing
+                    #filter moves based on whether they land on the board
                     if tuple(temp[i]) in self.board.printable_board:
 
-                        states.append(State(temp, self, self.board))
+                        states.append(State(temp, self, self.board, self.cost + 1))
                 
-                #move off board, should'nt this be at the top?
+                #if the piece in question is in the final row, add an exit move
                 if self.poslist[i] in self.board.final_row:
                     temp = deepcopy(self.poslist)
                     temp[i] = self.board.goal
-                    states.append(State(temp, self, self.board))
+                    states.append(State(temp, self, self.board, self.cost + 1))
 
         return states
 
