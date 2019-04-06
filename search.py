@@ -133,7 +133,7 @@ class State:
                 
                 #move off board, should'nt this be at the top?
                 if self.poslist[i] in self.board.final_row:
-                    temp = self.poslist[:]
+                    temp = deepcopy(self.poslist)
                     temp[i] = self.board.goal
                     states.append(State(temp, self, self.board))
 
