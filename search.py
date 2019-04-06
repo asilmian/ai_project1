@@ -9,6 +9,9 @@ import sys
 import json
 from copy import deepcopy
 import time
+import operator
+
+GOAL = [10,10]
 
 def main():
     with open(sys.argv[1]) as file:
@@ -18,7 +21,7 @@ def main():
     board = Board(data)
     board.debug_print()
 
-    solution = bfs(board)
+    solution = a_star_search(board)
 
     animate(board,solution)
     # TODO: Search for and output winning sequence of moves
@@ -34,7 +37,7 @@ class Board:
         self.initial_state = State(self.pieces, None, self, 0)
         self.printable_board = None    
         self.create_printable_board()
-        self.goal = None
+        self.goal = GOAL
         self.final_row = None
         self.fetch_goal_info()
     
@@ -44,7 +47,6 @@ class Board:
         """
         gets the goal state relative to the colour of the player piece
         """
-        self.goal = [10,10]
 
         if self.player_colour == 'red':
             self.final_row = [[3,-3], [3, -2], [3, -1], [3, 0]]
@@ -92,7 +94,8 @@ class State:
         self.parent = parent
         self.obstacles = board.blocks + poslist
         self.board = board
-        self.cost = cost
+        self.travel_cost = cost
+        self.total_cost = self.travel_cost + hueristic(self)
     
     def __str__(self):
 
@@ -128,15 +131,15 @@ class State:
                         temp[i][1] = temp[i][1] + move[1]
                     
                     #filter moves based on whether they land on the board
-                    if tuple(temp[i]) in self.board.printable_board:
+                    if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
 
-                        states.append(State(temp, self, self.board, self.cost + 1))
+                        states.append(State(temp, self, self.board, self.travel_cost + 1))
                 
                 #if the piece in question is in the final row, add an exit move
                 if self.poslist[i] in self.board.final_row:
                     temp = deepcopy(self.poslist)
                     temp[i] = self.board.goal
-                    states.append(State(temp, self, self.board, self.cost + 1))
+                    states.append(State(temp, self, self.board, self.travel_cost + 1))
 
         return states
 
@@ -152,7 +155,7 @@ class State:
 
         return flag
 
-def bfs(board):
+def a_star_search(board):
 
     start = board.initial_state
 
@@ -161,25 +164,37 @@ def bfs(board):
     queue = [start]
 
     #while not all pieces are of the board
-    while queue and not queue[-1].is_goal():
+    while queue and not queue[0].is_goal():
 
         parent = queue.pop(0)
-
         #check child states
         for child in parent.children():
             if child in seen:
                 continue
             queue.append(child)
             seen[child] = parent
+        queue.sort(key= operator.attrgetter('total_cost'))
 
     if queue:
         
-        return reconstruct_path(queue[-1])
+        return reconstruct_path(queue[0])
 
     else:
         return None
 
 
+def hueristic(state : State) -> int:
+    h_n = 0
+    if state.board.player_colour == "red":
+        for piece_postion in state.poslist:
+            h_n += 3 - piece_postion[0]
+    if state.board.player_colour == "blue":
+        for piece_postion in state.poslist:
+            h_n += -3 - (piece_postion[0] + piece_postion[1])
+    if state.board.player_colour == "green":
+        for piece_postion in state.poslist:
+            h_n += 3 - piece_postion[1]
+    return h_n
 
 def reconstruct_path(end_state):
     moves = []
