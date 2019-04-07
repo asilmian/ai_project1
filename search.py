@@ -46,10 +46,12 @@ def main():
     board = Board(data)
     if (DEBUG):
         board.debug_print()
+    
+
     solution = a_star_search(board)
 
     if (DEBUG):
-        #animate(board,solution)
+        animate(board,solution)
 
         print_solution(solution)
 
@@ -66,13 +68,14 @@ class Board:
         self.player_colour = starting_state["colour"]
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
-        self.initial_state = State(self.pieces, None, self, 0)
         self.printable_board = None    
         self.create_printable_board()
         self.final_row = FINAL_ROWS[self.player_colour]
         self.goal_row = GOAL_ROWS[self.player_colour]
-        self.cost_dict = {}
+        self.path_costs = None
         self.create_cost_dict()
+        self.initial_state = State(self.pieces, None, self, 0)
+
 
     def debug_print(self):
         out_state = self.create_printable_board()
@@ -100,16 +103,24 @@ class Board:
         return out_board
 
     def create_cost_dict(self):
+        # creates a dictionary of tiles on the board, and the number of jumps
+        # required to reach the goal from that tile (in the absence of hops over friendly pieces)
 
-        cost_dict = {}
+
+        # initialise a dictionary with the exit position corresponding to a 0 distance
+        cost_dict = {tuple(EXIT_POSITION): 0}
 
         queue = []
 
+        
+        # add the goal row to the dictionary
         for tile in self.goal_row:
             cost_dict[tuple(tile)] = 0
             queue.append(tuple(tile))
 
-        while queue:
+         # explore each currently reachable tile, and add it to the cost dictionary with a cost
+         # of 1 greater than its parent
+         while queue:
             current_tile = queue.pop(0)
             next_step = self.find_adjacent_tiles(current_tile)
             for step in next_step:
@@ -119,16 +130,26 @@ class Board:
                     cost_dict[tuple(step)] = cost_dict[current_tile] + 1
                     queue.append(tuple(step))
 
-        self.cost_dict = {}
+        self.path_costs = cost_dict
         return cost_dict
 
 
     def find_adjacent_tiles(self, tile):
+        # method to find all adjecent tiles to a given tile
+
         moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
         
         all_tiles = []
         for move in moves:
-            all_tiles.append([a+b for a,b in zip(tile, move)])
+            
+            new_tile = [a+b for a,b in zip(tile, move)]
+
+            if new_tile in self.blocks:
+                new_tile = [a+b for a,b in zip(new_tile, move)]
+           
+            all_tiles.append(new_tile)   
+        
+
 
         return [x for x in all_tiles if tuple(x) in self.printable_board 
                                 and x not in self.blocks]
@@ -146,7 +167,7 @@ class State:
         self.obstacles = board.blocks + poslist
         self.board = board
         self.travel_cost = cost
-        self.total_cost = self.travel_cost + path_heuristic(self)
+        self.total_cost = self.travel_cost + 1.0*path_heuristic(self) # euclidean_heuristic(self)
     
     def __str__(self):
 
@@ -278,23 +299,18 @@ def euclidean_heuristic(state : State) -> float:
             else:
                 h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
 
-    return h_n/2
+    return h_n/6
 
 
 def path_heuristic(state : State) -> float:
 
     h_n = 0
-    colour = state.board.player_colour
-    goals = GOAL_ROWS[colour]
-
+    
     for piece_position in state.poslist:
-        if piece_position == EXIT_POSITION:
-            h_n -= 0
+        
+        h_n += state.board.path_costs[tuple(piece_position)]
 
-        else:
-            h_n += state.board.cost_dict[tuple(piece_position)]
-
-    return h_n/2
+    return h_n/6
 
 
 
