@@ -51,7 +51,7 @@ def main():
     solution = a_star_search(board)
 
     if (DEBUG):
-        animate(board,solution)
+       # animate(board,solution)
 
         print_solution(solution)
 
@@ -131,7 +131,7 @@ class Board:
                     queue.append(tuple(step))
 
         
-        print(cost_dict)
+        
         self.path_costs = cost_dict
         return cost_dict
 
