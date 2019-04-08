@@ -120,7 +120,7 @@ class Board:
 
          # explore each currently reachable tile, and add it to the cost dictionary with a cost
          # of 1 greater than its parent
-         while queue:
+        while queue:
             current_tile = queue.pop(0)
             next_step = self.find_adjacent_tiles(current_tile)
             for step in next_step:
@@ -130,6 +130,8 @@ class Board:
                     cost_dict[tuple(step)] = cost_dict[current_tile] + 1
                     queue.append(tuple(step))
 
+        
+        print(cost_dict)
         self.path_costs = cost_dict
         return cost_dict
 
@@ -144,9 +146,12 @@ class Board:
             
             new_tile = [a+b for a,b in zip(tile, move)]
 
-            if new_tile in self.blocks:
+            if new_tile in self.blocks and list(tile) not in self.goal_row:
+
+
                 new_tile = [a+b for a,b in zip(new_tile, move)]
-           
+                
+
             all_tiles.append(new_tile)   
         
 
@@ -167,7 +172,9 @@ class State:
         self.obstacles = board.blocks + poslist
         self.board = board
         self.travel_cost = cost
-        self.total_cost = self.travel_cost + 1.0*path_heuristic(self) # euclidean_heuristic(self)
+        self.heuristic_cost = path_heuristic(self)
+
+        self.total_cost = self.travel_cost + self.heuristic_cost
     
     def __str__(self):
 
@@ -216,7 +223,10 @@ class State:
                     #filter moves based on whether they land on the board or on obstacles
                     if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
 
-                        states.append(State(temp, self, self.board, self.travel_cost + 1))
+                        new_state = State(temp, self, self.board, self.travel_cost + 1)
+                        if (new_state.heuristic_cost < self.heuristic_cost):
+
+                            states.append(new_state)
         return states
 
 
@@ -299,7 +309,7 @@ def euclidean_heuristic(state : State) -> float:
             else:
                 h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
 
-    return h_n/6
+    return h_n/2
 
 
 def path_heuristic(state : State) -> float:
@@ -310,7 +320,7 @@ def path_heuristic(state : State) -> float:
         
         h_n += state.board.path_costs[tuple(piece_position)]
 
-    return h_n/6
+    return h_n/2
 
 
 
