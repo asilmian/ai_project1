@@ -17,7 +17,7 @@ import heapq
 
 #=================CONSTANTS======================================#
 
-DEBUG = 0        #use to turn on debugging 
+DEBUG = 1        #use to turn on debugging 
 BOILER_PLATE_LENGTH = 45
 BLOCK = "blk"
 
@@ -51,7 +51,7 @@ def main():
 
     solution = a_star_search(board)
 
-    if (DEBUG):
+    if (0):
         animate(board,solution)
 
 
@@ -74,7 +74,7 @@ class Board:
         self.final_row = FINAL_ROWS[self.player_colour]
         self.goal_row = GOAL_ROWS[self.player_colour]
         self.path_costs = None
-        self.create_cost_dict()
+        self.shortest_path_costs()
         self.initial_state = State(self.pieces, None, self, 0)
 
     def debug_print(self):
@@ -99,9 +99,44 @@ class Board:
             out_board[tuple(block)] = BLOCK
 
         self.printable_board = out_board
-        
         return out_board
-        
+
+    def shortest_path_costs(self):
+        """
+        uses dijkstra's to find the shortest path from the any final row to all other positions
+        only considers move action, no jump action
+        """
+        #assume all final_row pieces can access exit postition
+        cost_dict = {tuple(EXIT_POSITION): 0}
+        entry_point = 0
+        queue = []
+        #add all final pieces to queue with cost 1
+        for tile in self.final_row:
+            if tile not in self.blocks:
+
+                #a 3 point vector added to resolve same cost tiles sorting in heap
+                queue.append([1, entry_point, tuple(tile)])
+                cost_dict[tuple(tile)] = 1
+                entry_point +=1
+        heapq.heapify(queue)
+
+        #while not visited tiles exist
+        while queue:
+            curr_tile = heapq.heappop(queue)
+            #find cost for all adjacent tiles
+            for adjacent_tile in self.find_adjacent_tiles(curr_tile[2]):
+
+                #if adjacent tile not seen before
+                if tuple(adjacent_tile) not in cost_dict:
+                    cost_dict[tuple(adjacent_tile)] = curr_tile[0] + 1
+                    heapq.heappush(queue, [curr_tile[0] + 1, entry_point, tuple(adjacent_tile)])
+                    entry_point += 1
+
+                #adjust if this path to adjacent tile is shorter
+                elif cost_dict[tuple(adjacent_tile)] > curr_tile[0] + 1:
+                    cost_dict[tuple(adjacent_tile)] = curr_tile[0] + 1
+        self.path_costs = cost_dict
+
 
 
     def find_adjacent_tiles(self, tile):
@@ -113,17 +148,9 @@ class Board:
         for move in moves:
             
             new_tile = [a+b for a,b in zip(tile, move)]
-
-            if new_tile in self.blocks and list(tile) not in self.goal_row:
-
-
-                new_tile = [a+b for a,b in zip(new_tile, move)]
-                
-
-            all_tiles.append(new_tile)   
+            if new_tile not in self.blocks and tuple(new_tile) in self.printable_board:
+                all_tiles.append(new_tile)
         
-
-
         return [x for x in all_tiles if tuple(x) in self.printable_board 
                                 and x not in self.blocks]
 
@@ -158,6 +185,8 @@ class State:
         return self.poslist == other.poslist
     
     def __lt__(self, other):
+        #if self.total_cost == other.total_cost:
+        #    return self.travel_cost < other.travel_cost
         return self.total_cost < other.total_cost
 
     def child_states(self):
@@ -177,15 +206,14 @@ class State:
                     temp[i] = EXIT_POSITION
                     states.append(State(temp, self, self.board, self.travel_cost + 1))
 
-                #create all move actions
+                #create the move action
                 for move in move_actions:
-                    
                     temp = deepcopy(self.poslist)
                     
                     temp[i][0] = temp[i][0] + move[0] 
                     temp[i][1] = temp[i][1] + move[1] 
                     
-                    #if any move action lands on obstacle, add jump action
+                    #if the move action lands on obstacle, turn into jump action
                     if temp[i] in self.obstacles:
                     
                         temp[i][0] = temp[i][0] + move[0] 
@@ -193,7 +221,6 @@ class State:
                     
                     #filter moves based on whether they land on the board or on obstacles
                     if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
-
                         new_state = State(temp, self, self.board, self.travel_cost + 1)
                         #if (new_state.heuristic_cost < self.heuristic_cost):
                         states.append(new_state)
@@ -287,7 +314,7 @@ def path_heuristic(state : State) -> float:
         
         h_n += state.board.path_costs[tuple(piece_position)]
 
-    return h_n/2
+    return (h_n) * 0.5
 
 
 
@@ -297,11 +324,7 @@ def cubify(pos):
     """
     transform into 3d cubic co-ordinates
     """
-    return [pos[0], pos[1], -pos[0]-pos[1]]  
-
-
-def cubify(pos):
-    return [pos[0], pos[1], -pos[0]-pos[1]]  
+    return [pos[0], pos[1], -pos[0]-pos[1]] 
 
 
 
