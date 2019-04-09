@@ -101,39 +101,7 @@ class Board:
         self.printable_board = out_board
         
         return out_board
-
-    def create_cost_dict(self):
-        # creates a dictionary of tiles on the board, and the number of jumps
-        # required to reach the goal from that tile (in the absence of hops over friendly pieces)
-
-
-        # initialise a dictionary with the exit position corresponding to a 0 distance
-        cost_dict = {tuple(EXIT_POSITION): 0}
-
-        queue = []
-
         
-        # add the goal row to the dictionary
-        for tile in self.goal_row:
-            cost_dict[tuple(tile)] = 0
-            queue.append(tuple(tile))
-
-         # explore each currently reachable tile, and add it to the cost dictionary with a cost
-         # of 1 greater than its parent
-        while queue:
-            current_tile = queue.pop(0)
-            next_step = self.find_adjacent_tiles(current_tile)
-            for step in next_step:
-                
-                if tuple(step) not in cost_dict:
-
-                    cost_dict[tuple(step)] = cost_dict[current_tile] + 1
-                    queue.append(tuple(step))
-
-        
-        
-        self.path_costs = cost_dict
-        return cost_dict
 
 
     def find_adjacent_tiles(self, tile):
