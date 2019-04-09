@@ -3,7 +3,7 @@ COMP30024 Artificial Intelligence, Semester 1 2019
 Solution to Project Part A: Searching
 
 Authors: 
-John Stephenson (insert student id)
+John Stephenson (587636)
 Asil Mian (867252)
 """
 
@@ -110,10 +110,10 @@ class Board:
         cost_dict = {tuple(EXIT_POSITION): 0}
         entry_point = 0
         queue = []
+
         #add all final pieces to queue with cost 1
         for tile in self.final_row:
             if tile not in self.blocks:
-
                 #a 3 point vector added to resolve same cost tiles sorting in heap
                 queue.append([1, entry_point, tuple(tile)])
                 cost_dict[tuple(tile)] = 1
