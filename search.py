@@ -227,8 +227,8 @@ class State:
                     if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
 
                         new_state = State(temp, self, self.board, self.travel_cost + 1)
-                        if (new_state.heuristic_cost < self.heuristic_cost):
-                            states.append(new_state)
+                        #if (new_state.heuristic_cost < self.heuristic_cost):
+                        states.append(new_state)
         return states
 
 
