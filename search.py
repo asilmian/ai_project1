@@ -13,10 +13,11 @@ from copy import deepcopy
 import time
 import operator
 from math import sqrt
+import heapq
 
 #=================CONSTANTS======================================#
 
-DEBUG = 1        #use to turn on debugging 
+DEBUG = 0        #use to turn on debugging 
 BOILER_PLATE_LENGTH = 45
 BLOCK = "blk"
 
@@ -39,6 +40,7 @@ EXIT_POSITION = [10,10]   #to represent an offboard piece
 
 
 def main():
+    start = time.time()
     with open(sys.argv[1]) as file:
         data = json.load(file)
 
@@ -51,12 +53,12 @@ def main():
     solution = a_star_search(board)
 
     if (DEBUG):
-       # animate(board,solution)
+        animate(board,solution)
 
-        print_solution(solution)
 
+    print_solution(solution)
+    print(time.time() - start)
     
-
 #=======================Classes==================================#
 class Board:
     """
@@ -188,6 +190,9 @@ class State:
 
     def __eq__(self, other):
         return self.poslist == other.poslist
+    
+    def __lt__(self, other):
+        return self.total_cost < other.total_cost
 
     def child_states(self):
         """
@@ -225,7 +230,6 @@ class State:
 
                         new_state = State(temp, self, self.board, self.travel_cost + 1)
                         if (new_state.heuristic_cost < self.heuristic_cost):
-
                             states.append(new_state)
         return states
 
@@ -257,21 +261,20 @@ def a_star_search(board):
     #seen dictionary to prevent going to already seen states
     seen = {}
     queue = [start]
+    heapq.heapify(queue)
 
     #while not all pieces are of the board
     while queue and not queue[0].is_goal():
-        parent_state = queue.pop(0)
+        parent_state = heapq.heappop(queue)
         #check child states
         for child in parent_state.child_states():
             if child in seen:
                 continue
             else:
-                queue.append(child)
+                heapq.heappush(queue, child)
                 seen[child] = True
-        parent_state.board.pieces = parent_state.poslist
+        #parent_state.board.pieces = parent_state.poslist
         #parent_state.board.debug_print()
-        #sort the queue based on the total cost of each state
-        queue.sort(key= operator.attrgetter('total_cost'))
 
     #return if solution found
     if queue:
@@ -309,7 +312,7 @@ def euclidean_heuristic(state : State) -> float:
             else:
                 h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
 
-    return h_n/2
+    return h_n/10
 
 
 def path_heuristic(state : State) -> float:
