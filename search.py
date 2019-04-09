@@ -38,7 +38,6 @@ EXIT_POSITION = [10,10]   #to represent an offboard piece
 
 #================================================================#
 
-
 def main():
     start = time.time()
     with open(sys.argv[1]) as file:
@@ -77,7 +76,6 @@ class Board:
         self.path_costs = None
         self.create_cost_dict()
         self.initial_state = State(self.pieces, None, self, 0)
-
 
     def debug_print(self):
         out_state = self.create_printable_board()
@@ -248,7 +246,6 @@ class State:
 #================================================================#
 
 
-
 #===============Search Functions=================================#
 
 
@@ -316,7 +313,6 @@ def euclidean_heuristic(state : State) -> float:
 
 
 def path_heuristic(state : State) -> float:
-
     h_n = 0
     
     for piece_position in state.poslist:
@@ -333,6 +329,10 @@ def cubify(pos):
     """
     transform into 3d cubic co-ordinates
     """
+    return [pos[0], pos[1], -pos[0]-pos[1]]  
+
+
+def cubify(pos):
     return [pos[0], pos[1], -pos[0]-pos[1]]  
 
 
