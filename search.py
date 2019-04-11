@@ -9,21 +9,13 @@ Asil Mian (867252)
 
 import sys
 import json
-import time
-import operator
 import heapq
 from board import Board
-
 import bprint
-#=================CONSTANTS======================================#
 
- 
-
-
-#================================================================#
 
 def main():
-    start = time.time()
+
     with open(sys.argv[1]) as file:
         data = json.load(file)
 
@@ -32,9 +24,6 @@ def main():
     solution = a_star_search(board)
 
     bprint.print_solution(solution)
-    
-    
-#===============Search Functions=================================#
 
 
 def a_star_search(board):
@@ -43,22 +32,22 @@ def a_star_search(board):
     leading to the solution if one is found
     """
     start = board.initial_state
-    #seen dictionary to prevent going to already seen states
+    # seen dictionary to prevent going to already seen states
     seen = {}
     queue = [start]
     heapq.heapify(queue)
 
-    #while not all pieces are of the board
+    # while not all pieces are of the board
     while queue and not queue[0].is_goal():
         parent_state = heapq.heappop(queue)
-        #check child states
+        # check child states
         for child in parent_state.child_states():
             if child in seen:
                 continue
             heapq.heappush(queue, child)
             seen[child] = True
         
-    #return if solution found
+    # return if solution found
     if queue:
         return reconstruct_path(queue[0])
 
@@ -79,13 +68,8 @@ def reconstruct_path(end_state):
         curr_state = curr_state.parent_state
     actions.append(curr_state.poslist)
 
-    #return action list in reverse order
+    # return action list in reverse order
     return actions[::-1]
-
-#================================================================#
-
-
-
 
 
 # when this module is executed, run the `main` function:
