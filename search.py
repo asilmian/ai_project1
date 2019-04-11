@@ -173,16 +173,12 @@ class State:
             self.board = parent_state.board
             self.travel_cost = parent_state.travel_cost + 1
             self.obstacles = self.board.blocks + self.poslist
-            self.jumps = self.parent_state.jumps
-            self.jump_tiles = self.parent_state.jump_tiles
         elif board:
             self.board = board
             self.travel_cost = 0
             self.obstacles = board.blocks + poslist
-            self.jumps = 1
-            self.jump_tiles = 1
         self.heuristic_cost = path_heuristic(self)
-        self.total_cost = self.travel_cost + (self.heuristic_cost * (0.5 * (self.jumps/self.jump_tiles)))
+        self.total_cost = self.travel_cost + self.heuristic_cost
     
     def __str__(self):
 
@@ -192,10 +188,10 @@ class State:
         return str(self)
 
     def __hash__(self):
-        return hash(tuple(tuple(x) for x in self.poslist))
-
+        return hash(tuple(tuple(x) for x in sorted(self.poslist)))
+    
     def __eq__(self, other):
-        return self.poslist == other.poslist
+        return set([tuple(x) for x in self.poslist]) == set([tuple(x) for x in other.poslist])
     
     def __lt__(self, other):
         #if self.total_cost == other.total_cost:
@@ -221,16 +217,10 @@ class State:
 
                 #create the move action
                 for move in move_actions:
-                    is_jump = False
-                    is_jump_tile = False
-                    
                     temp_move = [self.poslist[i][0] + move[0], self.poslist[i][1] + move[1]] 
                     
                     #if the move action lands on obstacle, turn into jump action
                     if temp_move in self.obstacles:
-                        is_jump = True
-                        if temp_move in self.poslist:
-                            is_jump_tile = True
                         temp_move[0] += move[0] 
                         temp_move[1] += move[1]
                     
@@ -239,13 +229,8 @@ class State:
                         temp = (self.poslist).copy()
                         temp[i] = temp_move
                         new_state = State(temp, self)
-                        if is_jump:
-                            new_state.jumps += 1
-                        if is_jump_tile:
-                            new_state.jump_tiles += 1
-                            new_state.travel_cost -= 0.5
-                        if new_state.heuristic_cost <= self.heuristic_cost:
-                            states.append(new_state)
+                        #if new_state.heuristic_cost <= self.heuristic_cost:
+                        states.append(new_state)
         return states
 
 
@@ -334,9 +319,7 @@ def path_heuristic(state : State) -> float:
         
         h_n += state.board.path_costs[tuple(piece_position)]
 
-    if  not (state.jumps - state.jump_tiles):
-        return h_n
-    return h_n
+    return h_n/2
 
 
 
