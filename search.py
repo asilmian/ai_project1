@@ -11,13 +11,10 @@ import sys
 import json
 import time
 import operator
-from math import sqrt
 import heapq
-import cProfile
 #=================CONSTANTS======================================#
 
 DEBUG = 1        #use to turn on debugging 
-BOILER_PLATE_LENGTH = 45
 BLOCK = "blk"
 
 RED = "red"
@@ -44,16 +41,12 @@ def main():
     with open(sys.argv[1]) as file:
         data = json.load(file)
 
-    pr = cProfile.Profile()
-    pr.enable()
     board = Board(data)
     if (DEBUG):
         board.debug_print()
     
 
     solution = a_star_search(board)
-    pr.disable()
-    pr.print_stats(sort="calls")
 
     if (0):
         animate(board,solution)
@@ -207,7 +200,6 @@ class State:
         """
         finds the set of next possible states from the current state
         """
-        move_actions = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
         states = []
         
         #for each piece
@@ -221,7 +213,7 @@ class State:
                     states.append(State(temp_poslist, self))
 
                 #create the move action
-                for move in move_actions:
+                for move in MOVE_ACTIONS:
                     temp_move = [self.poslist[i][0] + move[0], self.poslist[i][1] + move[1]] 
                     
                     #if the move action lands on obstacle, turn into jump action
@@ -286,37 +278,6 @@ def a_star_search(board):
         return None
 
 
-def euclidean_heuristic(state : State) -> float:
-    """
-    estimates the cost to end state from current state
-    by using 3d cubic euclidian distance
-    """
-    
-    h_n = 0
-    colour = state.board.player_colour
-    goals = GOAL_ROWS[colour]
-
-    for piece_position in state.poslist:
-        if piece_position == EXIT_POSITION:
-            h_n -= 0
-
-        #evaluate current state based on player colour
-        else:
-            cube_pos = cubify(piece_position)
-            cube_goals = [cubify(x) for x in goals]
-
-            if colour == RED:
-                h_n += min(([(cube_pos[0]-x[0])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
-
-            elif colour == GREEN:
-                h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
-        
-            else:
-                h_n += min(([(cube_pos[1]-x[1])**2 + (cube_pos[2]-x[2])**2 for x in cube_goals]))
-
-    return h_n/10
-
-
 def path_heuristic(state : State) -> float:
     h_n = 0
     
@@ -325,19 +286,6 @@ def path_heuristic(state : State) -> float:
         h_n += state.board.path_costs[tuple(piece_position)]
 
     return h_n/2
-
-
-
-
-
-def cubify(pos):
-    """
-    transform into 3d cubic co-ordinates
-    """
-    return [pos[0], pos[1], -pos[0]-pos[1]] 
-
-
-
 
 
 def reconstruct_path(end_state):
@@ -365,22 +313,13 @@ def print_solution(solution):
     """
     Outputs the solution according to the project specification
     """
-    print_boiler_plate()
     for i in range(1, len(solution)):
-        print("{:11}".format(i) + " | " + print_move(solution[i-1], solution[i]))
+        print(i, get_move(solution[i-1], solution[i]))
 
-
-def print_boiler_plate():
+def get_move(start_point, end_point):
     """
-    Boiler plate for standard out
-    """
-    print(" action no. | standard output")
-    print("=" * BOILER_PLATE_LENGTH)
-
-def print_move(start_point, end_point):
-    """
-    Prints the action taking a piece from start_point to
-    end point
+    returns the action taken to go from the start point to the end point as 
+    a formatted string
     """
     result_str = ""
     for i in range(len(end_point)):
