@@ -19,7 +19,7 @@ class State:
             self.board = board
             self.travel_cost = 0
             self.obstacles = board.blocks + poslist
-        self.heuristic_cost = path_heuristic(self)
+        self.heuristic_cost = self.path_heuristic()
         self.total_cost = self.travel_cost + self.heuristic_cost
     
     def __str__(self):
@@ -84,10 +84,11 @@ class State:
 
         return flag
 
+    def path_heuristic(self):
+        h_n = 0
+    
+        for piece_position in self.poslist:
+        
+            h_n += self.board.path_costs[tuple(piece_position)]
 
-def path_heuristic(state: State) -> float:
-    h_n = 0
-    for piece_position in state.poslist:
-        h_n += state.board.path_costs[tuple(piece_position)]
-
-    return h_n/2
+        return h_n/2

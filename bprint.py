@@ -4,7 +4,7 @@ def print_solution(solution):
     Outputs the solution according to the project specification
     """
     for i in range(len(solution)):
-        print(get_move(solution[i-1], solution[i]))
+        print(i, get_move(solution[i-1], solution[i]))
 
 
 def get_move(start_point, end_point):
