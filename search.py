@@ -155,6 +155,11 @@ class Board:
                 jump_tile = [a+b for a,b in zip(new_tile, move)]
                 if jump_tile not in self.blocks and tuple(jump_tile) in self.printable_board:
                     all_tiles.append(jump_tile)
+
+         
+            all_tiles.append(new_tile)
+
+
         
         return [x for x in all_tiles if tuple(x) in self.printable_board 
                                 and x not in self.blocks]
