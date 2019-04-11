@@ -11,19 +11,24 @@ class State:
     def __init__(self, poslist, parent_state, board=None):
         self.poslist = poslist
         self.parent_state = parent_state
+
+        #contruct by parent state
         if parent_state:
             self.board = parent_state.board
             self.travel_cost = parent_state.travel_cost + 1
             self.obstacles = self.board.blocks + self.poslist
+
+        #construct by board
         elif board:
             self.board = board
             self.travel_cost = 0
             self.obstacles = board.blocks + poslist
+        
         self.heuristic_cost = self.path_heuristic()
         self.total_cost = self.travel_cost + self.heuristic_cost
     
-    def __str__(self):
 
+    def __str__(self):
         return "{}".format(self.poslist)
 
     def __repr__(self):
@@ -36,7 +41,6 @@ class State:
         return set([tuple(x) for x in self.poslist]) == set([tuple(x) for x in other.poslist])
     
     def __lt__(self, other):
-        # if self.total_cost == other.total_cost:
         return self.total_cost < other.total_cost
 
     def child_states(self):
@@ -54,7 +58,7 @@ class State:
                     temp_poslist = self.poslist.copy()
                     temp_poslist[i] = self.EXIT_POSITION
                     states.append(State(temp_poslist, self))
-
+                    continue
                 # create the move action
                 for move in self.MOVE_ACTIONS:
                     temp_move = [self.poslist[i][0] + move[0], self.poslist[i][1] + move[1]] 
@@ -85,8 +89,11 @@ class State:
         return flag
 
     def path_heuristic(self):
-        h_n = 0
-    
+        """
+        finds the minimum number of jumps needed to get to the goal state
+        """
+
+        h_n = 0 
         for piece_position in self.poslist:
         
             h_n += self.board.path_costs[tuple(piece_position)]
