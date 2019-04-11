@@ -268,8 +268,7 @@ def a_star_search(board):
                 continue
             heapq.heappush(queue, child)
             seen[child] = True
-        #parent_state.board.pieces = parent_state.poslist
-        #parent_state.board.debug_print()
+        
     #return if solution found
     if queue:
         return reconstruct_path(queue[0])
