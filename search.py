@@ -3,21 +3,20 @@ COMP30024 Artificial Intelligence, Semester 1 2019
 Solution to Project Part A: Searching
 
 Authors: 
-John Stephenson (insert student id)
+John Stephenson (587636)
 Asil Mian (867252)
 """
 
 import sys
 import json
-from copy import deepcopy
 import time
 import operator
 from math import sqrt
 import heapq
-
+import cProfile
 #=================CONSTANTS======================================#
 
-DEBUG = 0        #use to turn on debugging 
+DEBUG = 1        #use to turn on debugging 
 BOILER_PLATE_LENGTH = 45
 BLOCK = "blk"
 
@@ -33,6 +32,8 @@ FINAL_ROWS = {RED : [[3,-3], [3, -2], [3, -1], [3, 0]],
 GOAL_ROWS = {RED: [[4,-3], [4,-2], [4,-1]], 
                    GREEN: [[-3,4], [-2,4], [-1,4]] , 
                    BLUE: [[-3,-1], [-2,-2], [-1,-3]]}
+
+MOVE_ACTIONS = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
                  
 EXIT_POSITION = [10,10]   #to represent an offboard piece
 
@@ -43,15 +44,18 @@ def main():
     with open(sys.argv[1]) as file:
         data = json.load(file)
 
-
+    pr = cProfile.Profile()
+    pr.enable()
     board = Board(data)
     if (DEBUG):
         board.debug_print()
     
 
     solution = a_star_search(board)
+    pr.disable()
+    pr.print_stats(sort="calls")
 
-    if (DEBUG):
+    if (0):
         animate(board,solution)
 
 
@@ -74,8 +78,8 @@ class Board:
         self.final_row = FINAL_ROWS[self.player_colour]
         self.goal_row = GOAL_ROWS[self.player_colour]
         self.path_costs = None
-        self.create_cost_dict()
-        self.initial_state = State(self.pieces, None, self, 0)
+        self.shortest_path_costs()
+        self.initial_state = State(self.pieces, None, self)
 
     def debug_print(self):
         out_state = self.create_printable_board()
@@ -99,63 +103,59 @@ class Board:
             out_board[tuple(block)] = BLOCK
 
         self.printable_board = out_board
-        
         return out_board
 
-    def create_cost_dict(self):
-        # creates a dictionary of tiles on the board, and the number of jumps
-        # required to reach the goal from that tile (in the absence of hops over friendly pieces)
-
-
-        # initialise a dictionary with the exit position corresponding to a 0 distance
+    def shortest_path_costs(self):
+        """
+        uses dijkstra's to find the shortest path from the any final row to all other positions
+        and returns a dictionary with all the costs
+        """
+        #assume all final_row pieces can access exit postition
         cost_dict = {tuple(EXIT_POSITION): 0}
-
+        entry_point = 0
         queue = []
 
-        
-        # add the goal row to the dictionary
-        for tile in self.goal_row:
-            cost_dict[tuple(tile)] = 0
-            queue.append(tuple(tile))
+        #add all final pieces to queue with cost 1
+        for tile in self.final_row:
+            if tile not in self.blocks:
+                #a 3 point vector added to resolve same cost tiles sorting in heap
+                queue.append([1, entry_point, tuple(tile)])
+                cost_dict[tuple(tile)] = 1
+                entry_point +=1
+        heapq.heapify(queue)
 
-         # explore each currently reachable tile, and add it to the cost dictionary with a cost
-         # of 1 greater than its parent
+        #while not visited tiles exist
         while queue:
-            current_tile = queue.pop(0)
-            next_step = self.find_adjacent_tiles(current_tile)
-            for step in next_step:
-                
-                if tuple(step) not in cost_dict:
+            curr_tile = heapq.heappop(queue)
+            #find cost for all adjacent tiles
+            for adjacent_tile in self.find_adjacent_tiles(curr_tile[2]):
 
-                    cost_dict[tuple(step)] = cost_dict[current_tile] + 1
-                    queue.append(tuple(step))
+                #if adjacent tile not seen before
+                if tuple(adjacent_tile) not in cost_dict:
+                    cost_dict[tuple(adjacent_tile)] = curr_tile[0] + 1
+                    heapq.heappush(queue, [curr_tile[0] + 1, entry_point, tuple(adjacent_tile)])
+                    entry_point += 1
 
-        
-        
+                #adjust if this path to adjacent tile is shorter
+                elif cost_dict[tuple(adjacent_tile)] > curr_tile[0] + 1:
+                    cost_dict[tuple(adjacent_tile)] = curr_tile[0] + 1
         self.path_costs = cost_dict
-        return cost_dict
+
 
 
     def find_adjacent_tiles(self, tile):
         # method to find all adjecent tiles to a given tile
-
-        moves = [[0, 1], [1, 0] , [1, -1], [0, -1], [-1, 0,], [-1, 1]]
         
         all_tiles = []
-        for move in moves:
-            
+        for move in MOVE_ACTIONS:
             new_tile = [a+b for a,b in zip(tile, move)]
-
-            if new_tile in self.blocks and list(tile) not in self.goal_row:
-
-
-                new_tile = [a+b for a,b in zip(new_tile, move)]
-                
-
-            all_tiles.append(new_tile)   
+            if new_tile not in self.blocks and tuple(new_tile) in self.printable_board:
+                all_tiles.append(new_tile)
+            elif new_tile in self.blocks:
+                jump_tile = [a+b for a,b in zip(new_tile, move)]
+                if jump_tile not in self.blocks and tuple(jump_tile) in self.printable_board:
+                    all_tiles.append(jump_tile)
         
-
-
         return [x for x in all_tiles if tuple(x) in self.printable_board 
                                 and x not in self.blocks]
 
@@ -166,14 +166,18 @@ class State:
     i.e where each movable piece is and where it can possibly move
     """
 
-    def __init__(self, poslist, parent_state, board, cost):
+    def __init__(self, poslist, parent_state, board = None):
         self.poslist = poslist
         self.parent_state = parent_state
-        self.obstacles = board.blocks + poslist
-        self.board = board
-        self.travel_cost = cost
+        if parent_state:
+            self.board = parent_state.board
+            self.travel_cost = parent_state.travel_cost + 1
+            self.obstacles = self.board.blocks + self.poslist
+        elif board:
+            self.board = board
+            self.travel_cost = 0
+            self.obstacles = board.blocks + poslist
         self.heuristic_cost = path_heuristic(self)
-
         self.total_cost = self.travel_cost + self.heuristic_cost
     
     def __str__(self):
@@ -184,12 +188,14 @@ class State:
         return str(self)
 
     def __hash__(self):
-        return hash(tuple(tuple(x) for x in self.poslist))
-
+        return hash(tuple(tuple(x) for x in sorted(self.poslist)))
+    
     def __eq__(self, other):
-        return self.poslist == other.poslist
+        return set([tuple(x) for x in self.poslist]) == set([tuple(x) for x in other.poslist])
     
     def __lt__(self, other):
+        #if self.total_cost == other.total_cost:
+        #    return self.travel_cost < other.travel_cost
         return self.total_cost < other.total_cost
 
     def child_states(self):
@@ -205,30 +211,26 @@ class State:
 
                 #if the piece in question is in the final row, add make an exit action
                 if self.poslist[i] in self.board.final_row:
-                    temp = deepcopy(self.poslist)
-                    temp[i] = EXIT_POSITION
-                    states.append(State(temp, self, self.board, self.travel_cost + 1))
+                    temp_poslist = (self.poslist).copy()
+                    temp_poslist[i] = EXIT_POSITION
+                    states.append(State(temp_poslist, self))
 
-                #create all move actions
+                #create the move action
                 for move in move_actions:
+                    temp_move = [self.poslist[i][0] + move[0], self.poslist[i][1] + move[1]] 
                     
-                    temp = deepcopy(self.poslist)
-                    
-                    temp[i][0] = temp[i][0] + move[0] 
-                    temp[i][1] = temp[i][1] + move[1] 
-                    
-                    #if any move action lands on obstacle, add jump action
-                    if temp[i] in self.obstacles:
-                    
-                        temp[i][0] = temp[i][0] + move[0] 
-                        temp[i][1] = temp[i][1] + move[1]
+                    #if the move action lands on obstacle, turn into jump action
+                    if temp_move in self.obstacles:
+                        temp_move[0] += move[0] 
+                        temp_move[1] += move[1]
                     
                     #filter moves based on whether they land on the board or on obstacles
-                    if tuple(temp[i]) in self.board.printable_board and temp[i] not in self.obstacles:
-
-                        new_state = State(temp, self, self.board, self.travel_cost + 1)
-                        if (new_state.heuristic_cost < self.heuristic_cost):
-                            states.append(new_state)
+                    if tuple(temp_move) in self.board.printable_board and temp_move not in self.obstacles:
+                        temp = (self.poslist).copy()
+                        temp[i] = temp_move
+                        new_state = State(temp, self)
+                        #if new_state.heuristic_cost <= self.heuristic_cost:
+                        states.append(new_state)
         return states
 
 
@@ -267,12 +269,10 @@ def a_star_search(board):
         for child in parent_state.child_states():
             if child in seen:
                 continue
-            else:
-                heapq.heappush(queue, child)
-                seen[child] = True
+            heapq.heappush(queue, child)
+            seen[child] = True
         #parent_state.board.pieces = parent_state.poslist
         #parent_state.board.debug_print()
-
     #return if solution found
     if queue:
         return reconstruct_path(queue[0])
@@ -329,11 +329,7 @@ def cubify(pos):
     """
     transform into 3d cubic co-ordinates
     """
-    return [pos[0], pos[1], -pos[0]-pos[1]]  
-
-
-def cubify(pos):
-    return [pos[0], pos[1], -pos[0]-pos[1]]  
+    return [pos[0], pos[1], -pos[0]-pos[1]] 
 
 
 
