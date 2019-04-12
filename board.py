@@ -3,6 +3,11 @@ from state import State
 
 
 class Board:
+    """
+    represents the board.
+    contains player information, block information
+    and dictionary with shortest path cost to each postition from goal state
+    """
 
 
 #================== Constants ================================== #
@@ -22,13 +27,8 @@ class Board:
 
 # =============================================================== #
 
-    """
-    Class for representing a board.
-    contains player information, block information
-    and dictionary with shortest path cost to each postition from goal state
-    """
-
     def __init__(self, starting_state):
+
         self.player_colour = starting_state["colour"]
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
@@ -42,7 +42,8 @@ class Board:
 
     def create_printable_board(self):
         """
-        adds all possible positions of the board to a dictionary
+        creates the map of the board
+        add each legal position of the board into a dictionary
         """
         out_board = {}
         ran = range(-3, +3 + 1)
@@ -50,6 +51,7 @@ class Board:
         for qr in [(q, r) for q in ran for r in ran if -q - r in ran]:
             out_board[qr] = ""
 
+        
         for piece in self.pieces:
             out_board[tuple(piece)] = self.player_colour
 
@@ -71,7 +73,8 @@ class Board:
         # add all final pieces to queue with cost 1
         for tile in self.final_row:
             if tile not in self.blocks:
-                # a 3 point vector added to resolve same cost tiles sorting in heap
+
+                # a 3 point vector added to resolve same cost position sorting in heap
                 queue.append([1, entry_point, tuple(tile)])
                 cost_dict[tuple(tile)] = 1
                 entry_point += 1
@@ -81,7 +84,7 @@ class Board:
         while queue:
             curr_tile = heapq.heappop(queue)
 
-            # find cost for all adjacent tiles
+            #find cost for all adjacent tiles
             for adjacent_tile in self.find_adjacent_tiles(curr_tile[2]):
 
                 # if adjacent tile not seen before
@@ -110,7 +113,6 @@ class Board:
             #jump over blocks if possible
             if new_tile in self.blocks:
                 new_tile = [a+b for a, b in zip(new_tile, move)]
-                
             all_tiles.append(new_tile)
 
         return [x for x in all_tiles if tuple(x) in self.printable_board and x not in self.blocks]

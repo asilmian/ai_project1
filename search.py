@@ -9,15 +9,11 @@ Asil Mian (867252)
 
 import sys
 import json
-import time
 import heapq
 from board import Board
-from state import State
 from bprint import print_solution
 
-
 def main():
-    start = time.time()
     with open(sys.argv[1]) as file:
         data = json.load(file)
 
@@ -26,7 +22,6 @@ def main():
     solution = a_star_search(board)
 
     print_solution(solution)
-    print(time.time() - start)
 
 
 
@@ -37,16 +32,17 @@ def a_star_search(board):
     """
     start = board.initial_state
 
-    #seen dictionary to prevent going to already seen states
+    #stores all visited states
     seen = {}
     queue = [start]
+
     heapq.heapify(queue)
 
     #while not all pieces are of the board
     while queue and not queue[0].is_goal():
         parent_state = heapq.heappop(queue)
 
-        #check child states
+        #add child states to queue if not seen before
         for child in parent_state.child_states():
             if child in seen:
                 continue
@@ -68,9 +64,12 @@ def reconstruct_path(end_state):
     actions = []
     curr_state = end_state
 
+    #add all the moves until initial state is reached
     while curr_state.parent_state:
         actions.append(curr_state.poslist)
         curr_state = curr_state.parent_state
+
+    #add the initial state
     actions.append(curr_state.poslist)
 
     #return action list in reverse order

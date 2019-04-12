@@ -1,8 +1,9 @@
 
 class State:
     """
-    Class represents a state
-    i.e where each movable piece is and where it can possibly move
+    Represents a state of the board.
+    State is defined by the position of each player piece on the board
+    and is unique up to the ordering of the pieces
     """
 
     EXIT_POSITION = [10, 10]
@@ -35,9 +36,11 @@ class State:
         return str(self)
 
     def __hash__(self):
+        #hash ignoring the ordering of the positions in poslist
         return hash(tuple(tuple(x) for x in sorted(self.poslist)))
     
     def __eq__(self, other):
+        #ignoring ordering while testing for equality
         return set([tuple(x) for x in self.poslist]) == set([tuple(x) for x in other.poslist])
     
     def __lt__(self, other):
@@ -90,7 +93,7 @@ class State:
 
     def path_heuristic(self):
         """
-        finds the minimum number of jumps needed to get to the goal state
+        finds the minimum number of jump actions needed to get to the nearest goal state
         """
 
         h_n = 0 

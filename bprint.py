@@ -3,8 +3,8 @@ def print_solution(solution):
     """
     Outputs the solution according to the project specification
     """
-    for i in range(len(solution)):
-        print(i, get_move(solution[i-1], solution[i]))
+    for i in range(1, len(solution)):
+        print(get_move(solution[i-1], solution[i]))
 
 
 def get_move(start_point, end_point):
@@ -17,6 +17,7 @@ def get_move(start_point, end_point):
 
     result_str = ""
     for i in range(len(end_point)):
+        
         # find the piece that has moved
         if end_point[i] != start_point[i]:
 
