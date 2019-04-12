@@ -14,11 +14,7 @@ import heapq
 from board import Board
 from state import State
 from bprint import print_solution
-#=================CONSTANTS======================================#
 
-DEBUG = 1        #use to turn on debugging 
-
-#================================================================#
 
 def main():
     start = time.time()
@@ -63,7 +59,6 @@ def a_star_search(board):
 
     else:
         return None
-
 
 def reconstruct_path(end_state):
     """
