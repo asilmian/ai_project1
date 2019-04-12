@@ -1,12 +1,12 @@
-
 import heapq
 from state import State
 
 
 class Board:
 
+
+#================== Constants ================================== #
     BLOCK = "blk"
-    
     RED = "red"
     GREEN = "green"
     BLUE = "blue"
@@ -15,36 +15,34 @@ class Board:
     FINAL_ROWS = {RED: [[3, -3], [3, -2], [3, -1], [3, 0]],
                   GREEN: [[-3, 3], [-2, 3], [-1, 3], [0, 3]],
                   BLUE: [[-3, 0], [-2, -1], [-1, -2], [0, -3]]}
-    
-    GOAL_ROWS = {RED: [[4, -3], [4, -2], [4, -1]],
-                 GREEN: [[-3, 4], [-2, 4], [-1, 4]],
-                 BLUE: [[-3, -1], [-2, -2], [-1, -3]]}
-    
+
     MOVE_ACTIONS = [[0, 1], [1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1]]
                      
     EXIT_POSITION = [10, 10]   # to represent an off-board piece
 
+# =============================================================== #
+
     """
     Class for representing a board.
-    contains player information, and block information
+    contains player information, block information
+    and dictionary with shortest path cost to each postition from goal state
     """
 
     def __init__(self, starting_state):
         self.player_colour = starting_state["colour"]
         self.blocks = starting_state["blocks"]
         self.pieces = starting_state["pieces"]
-        self.printable_board = None    
-        self.create_printable_board()
         self.final_row = self.FINAL_ROWS[self.player_colour]
-        self.goal_row = self.GOAL_ROWS[self.player_colour]
-        self.path_costs = None
-        self.shortest_path_costs()
+
+        self.printable_board = self.create_printable_board()
+
+        self.path_costs = self.shortest_path_costs()
+
         self.initial_state = State(self.pieces, None, self)
 
     def create_printable_board(self):
         """
-        helper function for debug_print
-        creates the board as a dictionary
+        adds all possible positions of the board to a dictionary
         """
         out_board = {}
         ran = range(-3, +3 + 1)
@@ -58,7 +56,6 @@ class Board:
         for block in self.blocks:
             out_board[tuple(block)] = self.BLOCK
 
-        self.printable_board = out_board
         return out_board
 
     def shortest_path_costs(self):
@@ -83,6 +80,7 @@ class Board:
         # while not visited tiles exist
         while queue:
             curr_tile = heapq.heappop(queue)
+
             # find cost for all adjacent tiles
             for adjacent_tile in self.find_adjacent_tiles(curr_tile[2]):
 
@@ -95,21 +93,24 @@ class Board:
                 # adjust if this path to adjacent tile is shorter
                 elif cost_dict[tuple(adjacent_tile)] > curr_tile[0] + 1:
                     cost_dict[tuple(adjacent_tile)] = curr_tile[0] + 1
-        self.path_costs = cost_dict
+
+        return cost_dict
 
     def find_adjacent_tiles(self, tile):
-        # method to find all adjacent tiles to a given tile
+        """
+        Returns all the possible moves from current tile
+        only considers jumps over blocks and not pieces
+        """
         
         all_tiles = []
+
         for move in self.MOVE_ACTIONS:
             new_tile = [a+b for a, b in zip(tile, move)]
-            if new_tile not in self.blocks and tuple(new_tile) in self.printable_board:
-                all_tiles.append(new_tile)
-            elif new_tile in self.blocks:
-                jump_tile = [a+b for a, b in zip(new_tile, move)]
-                if jump_tile not in self.blocks and tuple(jump_tile) in self.printable_board:
-                    all_tiles.append(jump_tile)
-
+            
+            #jump over blocks if possible
+            if new_tile in self.blocks:
+                new_tile = [a+b for a, b in zip(new_tile, move)]
+                
             all_tiles.append(new_tile)
 
         return [x for x in all_tiles if tuple(x) in self.printable_board and x not in self.blocks]
